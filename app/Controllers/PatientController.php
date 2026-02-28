@@ -98,6 +98,36 @@ class PatientController {
     include '../views/partials/footer.php';
     }
     
+    //Bekleyen hastaları listeler pasif=-3
+    public function listwaiting() {
+        // 1. Parametreleri Yakala
+    $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+    $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset   = ($page - 1) * $limit;
+    $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    
+    // 2. Sıralama Mantığı
+    $orderby  = $_GET['orderby'] ?? 'h.isim';
+    $orderdir = (isset($_GET['orderdir']) && strtoupper($_GET['orderdir']) === 'DESC') ? 'DESC' : 'ASC';
+    $ordering = $orderby . ' ' . $orderdir;
+
+        $model = new Patient();
+        
+        $totalPatients = $model->countAllWaiting($search); 
+        $patients = $model->getAllWaiting($limit, $offset, $ordering, $search);
+        $totalPages = ceil($totalPatients / $limit);
+        
+        $pagelink = "index.php?controller=Patient&action=listwaiting";
+        $viewlink = "index.php?controller=Patient&action=bview&id=";
+        $editlink = "index.php?controller=Patient&action=bedit&id=";
+        $deletelink = "";
+
+        $pageTitle = "Bekleyen Hasta Listesi";
+        include '../views/partials/header.php';
+        include '../views/site/hasta/listwaiting.php';
+        include '../views/partials/footer.php';
+    }
+    
     //Ölen hastaları listeler pasif=-1
     public function listdied() {
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
@@ -116,29 +146,6 @@ class PatientController {
         $deletelink = "";
 
         $pageTitle = "Ölen Hasta Listesi";
-        include '../views/partials/header.php';
-        include '../views/site/hasta/liste.php';
-        include '../views/partials/footer.php';
-    }
-    
-    //Bekleyen hastaları listeler pasif=-3
-    public function listwaiting() {
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
-
-        $model = new Patient();
-        
-        $totalPatients = $model->countAllWaiting(); 
-        $patients = $model->getAllWaiting($limit, $offset);
-        $totalPages = ceil($totalPatients / $limit);
-        
-        $pagelink = "index.php?controller=Patient&action=listwaiting";
-        $viewlink = "index.php?controller=Patient&action=bview&id=";
-        $editlink = "index.php?controller=Patient&action=bedit&id=";
-        $deletelink = "";
-
-        $pageTitle = "Bekleyen Hasta Listesi";
         include '../views/partials/header.php';
         include '../views/site/hasta/liste.php';
         include '../views/partials/footer.php';
@@ -379,5 +386,44 @@ class PatientController {
     
     // View dosyasının geri kalanının yüklenmemesi için sonlandırıyoruz
     exit; 
+}
+
+    public function died() {
+    // 1. Güvenlik: TC parametresini al ve temizle
+    $tc = $_GET['tc'];
+    
+    if (!$tc) {
+        header('Content-Type: application/json');
+        echo json_encode(['oldu' => 0, 'error' => 'TC gecersiz']);
+        return 0;
+    }
+
+    // 2. Model üzerinden veriyi çek
+    $model = new Patient();
+    
+    $row = $model->died($tc);
+    
+    
+    $oldu = 0;
+    $olumTarihi = null;
+
+    // 3. Kontrol: Eğer hasta bulunduysa entegrasyonu çalıştır
+    if ($row) {
+        // Bir önceki adımda ValidationHelper içine yazmıştık
+        $sonuc = \App\Helpers\ValidationHelper::checkDeathNotification($row);
+        if ($sonuc) {
+            $oldu = 1;
+            $olumTarihi = $sonuc; // Tarihi de döndürebiliriz
+        }
+    }
+    
+    // 4. Çıktı: JSON formatında döndür
+    header('Content-Type: application/json');
+    echo json_encode([
+        'oldu' => $oldu,
+        'olumTarihi' => $olumTarihi
+    ]);
+    
+    return $oldu;
 }
 }

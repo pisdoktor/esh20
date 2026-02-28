@@ -10,23 +10,27 @@ class PaginationHelper {
      * @return string HTML Çıktısı
      */
     public static function limitSelector($current_limit, $base_url) {
-        $options = [5, 10, 15, 20, 25, 50, 100];
-        $html = '<div class="d-flex align-items-center small text-muted">';
-        $html .= '<span class="me-2">Göster:</span>';
-        $html .= '<select class="form-select form-select-sm" style="width: auto;" onchange="location = this.value;">';
-        
-        foreach ($options as $opt) {
-            $selected = ($current_limit == $opt) ? 'selected' : '';
-            // Sayfa başına limit değiştiğinde genellikle 1. sayfadan başlamak istenir
-            $url = "{$base_url}&limit={$opt}&page=1";
-            $html .= "<option value='{$url}' {$selected}>{$opt}</option>";
-        }
-        
-        $html .= '</select>';
-        $html .= '</div>';
-        
-        return $html;
+    $options = [5, 10, 15, 20, 25, 50, 100];
+    
+    // URL'deki mevcut limit ve page kısımlarını temizleyelim
+    $clean_url = preg_replace('/([&?])(limit|page)=[^&]*/', '', $base_url);
+    $sep = (strpos($clean_url, '?') === false) ? '?' : '&';
+    $final_url = rtrim($clean_url, '&?') . $sep;
+
+    $html = '<div class="d-flex align-items-center small text-muted">';
+    $html .= '<span class="me-2 text-nowrap">Satır:</span>';
+    $html .= '<select class="form-select form-select-sm" style="width: auto;" onchange="location = this.value;">';
+    
+    foreach ($options as $opt) {
+        $selected = ($current_limit == $opt) ? 'selected' : '';
+        // Yeni limit seçildiğinde her zaman 1. sayfaya atsın
+        $url = "{$final_url}limit={$opt}&page=1";
+        $html .= "<option value='{$url}' {$selected}>{$opt}</option>";
     }
+    
+    $html .= '</select></div>';
+    return $html;
+}
 
     /**
      * Özet Bilgi Metni (Örn: 50 kayıt arasından 11-20 gösteriliyor)

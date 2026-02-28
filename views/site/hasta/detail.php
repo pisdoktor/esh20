@@ -155,7 +155,7 @@
                         <div class="tab-pane fade" id="sondatab" role="tabpanel">
                             <?php if($hasta->sonda): ?>
                                 <div class="alert alert-success d-flex align-items-center"><i class="fa-solid fa-check-circle me-2"></i> Sonda Mevcut</div>
-                                <p class="small mb-0 text-muted">Takılma Tarihi: <strong><?php echo tarihCevir($hasta->sondatarihi, 1); ?></strong></p>
+                                <p class="small mb-0 text-muted">Takılma Tarihi: <strong><?php echo $hasta->sondatarihi; ?></strong></p>
                             <?php else: ?>
                                 <div class="text-center py-4"><i class="fa-solid fa-circle-xmark fa-3x text-muted mb-3"></i><p>Sonda kullanımı yok.</p></div>
                             <?php endif; ?>
@@ -209,14 +209,7 @@
             </div>
             <div class="modal-body p-0">
                 <div class="list-group list-group-flush shadow-sm">
-                    <?php foreach ($lists['isteklerdata'] as $value => $data): ?>
-                        <label class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 list-group-item-action cursor-pointer">
-                            <span><i class="fa-solid <?php echo $data['icon']; ?> me-3 text-secondary fa-fw"></i><?php echo $data['text']; ?></span>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="istekler[]" value="<?php echo $value; ?>">
-                            </div>
-                        </label>
-                    <?php endforeach; ?>
+                    
                 </div>
             </div>
             <div class="modal-footer bg-light">
@@ -256,18 +249,31 @@ function tekliMernisSorgula(tc) {
     btn.disabled = true;
 
     $.ajax({
-        url: 'index2.php?option=site&bolum=hastalar&task=tara',
-        type: 'POST',
+        url: 'index.php?controller=Patient&action=died',
+        type: 'GET',
         dataType: 'json',
         data: { tc: tc },
         success: function(response) {
-            if (response.oldu > 0) {
-                alert("MERNİS: Hastanın vefat ettiği tespit edildi. Sayfa yenileniyor.");
-                window.location.reload();
-            } else {
-                alert(response.mesaj || "MERNİS sorgulandı, durum değişikliği yok.");
+        if (response.oldu > 0) {
+        // Vefat bilgisi bulunduğunda kırmızı/turuncu bir uyarı
+        toastr.error(
+            "MERNİS: Hastanın vefat ettiği tespit edildi.<br><b>Vefat Tarihi: " + response.olumTarihi + "</b>", 
+            "Sistem Uyarısı", 
+            {
+                timeOut: 5000,
+                closeButton: true,
+                progressBar: true
             }
-        },
+        );
+
+        // İstersen 3 saniye sonra sayfayı yenileyebilirsin
+        // setTimeout(function() { window.location.reload(); }, 3000);
+
+    } else {
+        // Vefat yoksa mavi/bilgi uyarısı
+        toastr.info(response.mesaj || "Durum değişikliği yok.", "Sorgu Tamamlandı");
+    }
+},
         complete: function() {
             btn.innerHTML = oldHtml;
             btn.disabled = false;

@@ -89,6 +89,7 @@ class Patient extends BaseModel {
         parent::__construct('esh_hastalar', 'id');
     }
 
+    //aktif hastalar
     public function countAllActive($search = '') {
     $where = "WHERE h.pasif = 0";
     // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
@@ -146,7 +147,7 @@ class Patient extends BaseModel {
     return $this->db->setQuery($sql . " " . $where)->loadResult();
 }
 
-public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+    public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
     $where = "WHERE h.pasif = 1";
     if (!empty($search)) {
         $where .= " AND (h.isim LIKE '%{$search}%' 
@@ -170,15 +171,47 @@ public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC'
     
     return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
 }
+    //bekleyen hastalar
+    public function countAllWaiting($search = '') {
+        $where = "WHERE h.pasif = -3";
+    // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
+    $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id";
     
-    public function getAllWaiting($limit = 10, $offset = 0) {
-        $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    return $this->db->setQuery($sql . " " . $where)->loadResult();
+    }
+    
+    public function getAllWaiting($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+        $where = "WHERE h.pasif = -3";
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+        $query = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino 
                   FROM esh_hastalar h
-                  LEFT JOIN esh_adrestablosu i ON h.ilce = i.id
-                  LEFT JOIN esh_adrestablosu m ON h.mahalle = m.id
-                  WHERE pasif='-3' ORDER BY h.id DESC";
+                  LEFT JOIN esh_adrestablosu a1 ON h.ilce = a1.id
+                  LEFT JOIN esh_adrestablosu a2 ON h.mahalle = a2.id
+                  LEFT JOIN esh_adrestablosu a3 ON h.sokak = a3.id
+                  LEFT JOIN esh_adrestablosu a4 ON h.kapino = a4.id
+                  {$where} 
+                  ORDER BY {$ordering}";
         
         return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
+    }
+    
+    //ölen hastalar
+    public function countAllDied() {
+        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='-1'";
+        return $this->db->setQuery($query)->loadResult();
     }
     
     public function getAllDied($limit = 10, $offset = 0) {
@@ -190,6 +223,11 @@ public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC'
         
         return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
     }
+    //silinen hastalar
+    public function countAllDeleted() {
+        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='5'";
+        return $this->db->setQuery($query)->loadResult();
+    }
     
     public function getAllDeleted($limit = 10, $offset = 0) {
         $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
@@ -199,6 +237,11 @@ public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC'
                   WHERE pasif='5' ORDER BY h.id DESC";
         
         return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
+    }
+    //muhtemel ölenler
+    public function countAllAraf() {
+        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='4'";
+        return $this->db->setQuery($query)->loadResult();
     }
     
     public function getAllAraf($limit = 10, $offset = 0) {
@@ -210,30 +253,6 @@ public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC'
         
         return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
     }
-    
-
-    
-    public function countAllWaiting() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='-3'";
-        return $this->db->setQuery($query)->loadResult();
-    }
-    
-    public function countAllDied() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='-1'";
-        return $this->db->setQuery($query)->loadResult();
-    }
-    
-    public function countAllDeleted() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='5'";
-        return $this->db->setQuery($query)->loadResult();
-    }
-    
-    public function countAllAraf() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='4'";
-        return $this->db->setQuery($query)->loadResult();
-    }
-    
-
     /**
      * TC Kimlik numarasına göre tek bir hasta nesnesi döndürür
      */
@@ -328,5 +347,16 @@ public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC'
                   WHERE id IN ($ids)";
         
         return $this->db->setQuery($query)->loadResult();
+    }
+    
+    public function died($tc) {
+    
+        $sql = "SELECT 
+                isim, soyisim, anneAdi, babaAdi 
+                FROM esh_hastalar 
+                WHERE tckimlik = {$tc}";
+                
+        return $this->db->setQuery($sql)->loadObject();
+    
     }
 }

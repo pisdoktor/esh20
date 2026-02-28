@@ -8,7 +8,7 @@
         <div class="col-md-5">
             <form action="index.php" method="GET" class="d-flex shadow-sm rounded-pill overflow-hidden bg-white p-1">
                 <input type="hidden" name="controller" value="Patient">
-                <input type="hidden" name="action" value="listactive">
+                <input type="hidden" name="action" value="listwaiting">
                 <input type="text" name="search" class="form-control border-0 px-3" 
                        placeholder="İsim, soyisim veya TC ile ara..." 
                        value="<?= htmlspecialchars($search ?? '') ?>">
@@ -27,7 +27,7 @@
     <?php if(!empty($search)): ?>
         <div class="alert alert-info py-2 d-flex justify-content-between align-items-center rounded-4 mb-3">
             <span><strong>"<?= htmlspecialchars($search) ?>"</strong> araması için <strong><?= $totalPatients ?></strong> sonuç bulundu.</span>
-            <a href="index.php?controller=Patient&action=listactive" class="btn btn-sm btn-outline-info rounded-pill">Aramayı Temizle</a>
+            <a href="index.php?controller=Patient&action=listwaiting" class="btn btn-sm btn-outline-info rounded-pill">Aramayı Temizle</a>
         </div>
     <?php endif; ?>
 
@@ -37,9 +37,6 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
     <tr class="align-middle">
-        <th width="80" class="text-center text-primary ps-3">
-            <i class="fa-solid fa-chart-line"></i><br><small class="x-small">İzlem</small>
-        </th>
         <?php $sort = \App\Helpers\UIHelper::sortIcon('h.isim', $ordering);?>
         <th>
             <a href="<?= $pagelink ?>&orderby=h.isim&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
@@ -75,10 +72,10 @@
                 Kayıt Tarihi <?= $sort['icon']; ?>
             </a>
         </th>
-        <?php $sort = \App\Helpers\UIHelper::sortIcon('sonizlemtarihi', $ordering);?>
+        <?php $sort = \App\Helpers\UIHelper::sortIcon('h.randevutarihi', $ordering);?>
         <th class="pe-3">
-            <a href="<?= $pagelink ?>&orderby=sonizlemtarihi&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
-                Son İzlem <?= $sort['icon']; ?>
+            <a href="<?= $pagelink ?>&orderby=h.randevutarihi&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
+                Randevu Tarihi <?= $sort['icon']; ?>
             </a>
         </th>
     </tr>
@@ -86,44 +83,17 @@
                     <tbody>
                         <?php foreach ($patients as $patient): ?>
     <tr>
-        <td class="text-center" style="vertical-align: middle; padding: 5px; width: 85px;">
-            <div class="btn-group-vertical btn-group-sm w-100 shadow-sm">
-                <a href="index.php?controller=Visit&action=history&tc=<?= $patient->tckimlik ?>" 
-                   class="btn btn-info btn-xs py-1" data-bs-toggle="tooltip" title="Yapılan İzlem: <?= $patient->izlemsayisi ?? 0 ?>">
-                    <i class="fa-solid fa-check fa-fw"></i> <?= $patient->izlemsayisi ?? 0 ?>
-                </a>
-                <a href="index.php?controller=Visit&action=missed&tc=<?= $patient->tckimlik ?>" 
-                   class="btn <?= ($patient->yizlemsayisi ?? 0) > 0 ? 'btn-danger' : 'btn-light' ?> btn-xs py-1" 
-                   data-bs-toggle="tooltip" title="Yapılmayan İzlem: <?= $patient->yizlemsayisi ?? 0 ?>">
-                    <i class="fa-solid fa-xmark fa-fw"></i> <?= $patient->yizlemsayisi ?? 0 ?>
-                </a>
-                <a href="index.php?controller=PlannedVisit&action=list&tc=<?= $patient->tckimlik ?>" 
-                   class="btn <?= ($patient->totalplanli ?? 0) > 0 ? 'btn-warning' : 'btn-light' ?> btn-xs py-1" 
-                   data-bs-toggle="tooltip" title="Planlı İzlem: <?= $patient->totalplanli ?? 0 ?>">
-                    <i class="fa-solid fa-clock fa-fw"></i> <?= $patient->totalplanli ?? 0 ?>
-                </a>
-            </div>
-        </td>
-
-        <td style="vertical-align: middle;">
+            <td style="vertical-align: middle;">
             <div class="dropdown">
                 <a class="dropdown-toggle text-decoration-none fw-bold" href="#" data-bs-toggle="dropdown" 
                    style="color:<?= $patient->cinsiyet == '1' ? '#0d6efd' : '#dc3545' ?>;">
                     <?= htmlspecialchars($patient->isim . ' ' . $patient->soyisim) ?>
                 </a>
-                
-                <div class="mt-1">
-                    <?= \App\Helpers\BadgeHelper::patientFeatures($patient) ?>
-                </div>
 
                 <ul class="dropdown-menu shadow border-0">
                     <li><h6 class="dropdown-header">Hasta İşlemleri</h6></li>
                     <li><a class="dropdown-item" href="index.php?controller=Patient&action=view&id=<?= $patient->id ?>"><i class="fa-solid fa-id-card text-primary me-2"></i> Bilgileri Göster</a></li>
                     <li><a class="dropdown-item" href="index.php?controller=Patient&action=edit&id=<?= $patient->id ?>"><i class="fa-solid fa-pen-to-square text-warning me-2"></i> Bilgileri Düzenle</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Visit&action=history&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-list-check text-info me-2"></i> İzlem Geçmişi</a></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Visit&action=create&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-plus text-success me-2"></i> Yeni İzlem Gir</a></li>
-                    <li><a class="dropdown-item" href="index.php?controller=PlannedVisit&action=create&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-calendar-plus text-info me-2"></i> İzlem Planla</a></li>
                 </ul>
             </div> 
         </td>
@@ -140,7 +110,7 @@
             <i class="fa-solid fa-map-location-dot me-1 text-muted opacity-50"></i>
             <span class="small fw-semibold text-dark me-2"><?= $patient->mahalle_adi ?></span>
             
-            <a href="index.php?controller=Patient&action=listactive&search=<?= urlencode($patient->ilce_adi) ?>" 
+            <a href="index.php?controller=Patient&action=listwaiting&search=<?= urlencode($patient->ilce_adi) ?>" 
                class="badge bg-primary-soft text-primary x-small fw-normal text-decoration-none">
                 <?= mb_strtoupper($patient->ilce_adi, 'UTF-8') ?>
             </a>
@@ -184,8 +154,8 @@
         <td style="vertical-align: middle;" class="x-small text-muted">
             <?= \App\Helpers\DateHelper::toTr($patient->kayittarihi) ?>
         </td>
-        <td style="vertical-align: middle;" class="small fw-bold <?= empty($patient->sonizlemtarihi) ? 'text-danger' : 'text-success' ?>">
-            <?= !empty($patient->sonizlemtarihi) ? \App\Helpers\DateHelper::toTr($patient->sonizlemtarihi) : 'İzlem Yok' ?>
+        <td style="vertical-align: middle;" class="small fw-bold <?= empty($patient->randevutarihi) ? 'text-danger' : 'text-success' ?>">
+            <?= !empty($patient->randevutarihi) ? \App\Helpers\DateHelper::toTr($patient->randevutarihi) : 'Randevusu Yok' ?>
         </td>
     </tr> 
 <?php endforeach; ?>

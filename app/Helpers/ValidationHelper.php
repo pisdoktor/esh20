@@ -61,5 +61,50 @@ class ValidationHelper {
         }
         return $errors;
     }
+    
+    /**
+     * Denizli Büyükşehir Belediyesi Mezarlık Sistemi üzerinden ölüm kontrolü yapar
+     * @param object $patient Hasta nesnesi (id, isim, soyisim, anneAdi, babaAdi içeren)
+     * @return string|bool Ölüm tarihi (d.m.Y) veya bulunamadıysa false
+     */
+    public static function checkDeathNotification($patient) {
+        // 1 Ay önceki timestamp (Karşılaştırma için)
+        $limitTimestamp = strtotime('-1 month');
+
+        // Belediye Sorgu Linki (UTF-8 karakter sorunlarını önlemek için urlencode kullanıyoruz)
+        $link = "http://mezarlik.denizli.bel.tr/sorgu.ashx?islem=definListesiGetir";
+        $link .= "&ad=" . urlencode(trim($patient->isim));
+        $link .= "&soyad=" . urlencode(trim($patient->soyisim));
+        $link .= "&anneAd=" . urlencode(trim($patient->anneAdi));
+        $link .= "&babaAd=" . urlencode(trim($patient->babaAdi));
+
+        try {
+            // Veriyi çek (file_get_contents bazen DOMDocument'ten daha hızlıdır)
+            $jsonRaw = @file_get_contents($link);
+            
+            if (!$jsonRaw || strlen($jsonRaw) < 10) return false;
+
+            // JSON verisini parse et (Diziye çevir)
+            $data = json_decode($jsonRaw, true);
+
+            // Gelen veri bir dizi mi ve içinde kayıt var mı? (Belediye genelde dizi içinde nesne döner)
+            if (is_array($data) && isset($data[0]['olumTarihi'])) {
+                
+                $kisi = $data[0]; // İlk eşleşen kaydı al
+                $olumTarihiRaw = $kisi['olumTarihi']; // Örn: 2023-10-25T00:00:00
+                $olumTimestamp = strtotime($olumTarihiRaw);
+
+                // Eğer ölüm tarihi son 1 ay içindeyse tarihi döndür
+                if ($olumTimestamp > $limitTimestamp) {
+                    return date('d.m.Y', $olumTimestamp);
+                }
+            }
+        } catch (\Exception $e) {
+            // Hata durumunda (bağlantı vb.) sessiz kal veya logla
+            return false;
+        }
+
+        return false;
+    }
 
 }

@@ -192,15 +192,21 @@
         </div>
         
         <div class="card-footer bg-white border-top-0 py-3">
-    <div class="d-flex justify-content-between align-items-center">
-        <div class="small text-muted">
-            <?= \App\Helpers\PaginationHelper::infoText($totalPatients, $page, $limit) ?>
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="small text-muted">
+                    <?= \App\Helpers\PaginationHelper::infoText($totalPatients, $page, $limit) ?>
+                    </div>
+                    <div>
+                    <?= \App\Helpers\PaginationHelper::limitSelector($limit, $pagelink) ?>
+                    </div>
+                </div>
+                <div>
+                <?= \App\Helpers\PaginationHelper::render($totalPatients, $page, $limit, $pagelink) ?>
+                </div>
+            </div>
         </div>
-        <div>
-            <?= \App\Helpers\PaginationHelper::render($totalPatients, $page, $limit, $pagelink) ?>
-        </div>
-    </div>
-</div>
+        
     </div>
 </div>
 
