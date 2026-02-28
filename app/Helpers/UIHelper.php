@@ -144,4 +144,34 @@ class UIHelper {
         </nav>
         <?php
     }
+    
+    /**
+ * Tablo başlıkları için sıralama ikonunu render eder
+ */
+/**
+ * Tablo başlıkları için sıralama ikonunu ve yönünü yönetir
+ */
+public static function sortIcon($field, $ordering) {
+    // Mevcut sıralamayı parçala (Örn: "h.isim ASC")
+    $bits = explode(' ', $ordering);
+    $currentField = $bits[0];
+    $currentDir = isset($bits[1]) ? strtoupper($bits[1]) : 'ASC';
+
+    // Varsayılan ikon (sıralama yoksa)
+    $icon = ' <i class="fa-solid fa-sort text-muted opacity-25"></i>';
+    $nextDir = 'ASC'; // Hiç sıralanmamışsa ilk tıklama ASC olsun
+
+    if ($field == $currentField) {
+        if ($currentDir == 'ASC') {
+            $icon = ' <i class="fa-solid fa-sort-up text-primary"></i>';
+            $nextDir = 'DESC'; // ASC ise bir sonraki tıklama DESC olsun
+        } else {
+            $icon = ' <i class="fa-solid fa-sort-down text-primary"></i>';
+            $nextDir = 'ASC'; // DESC ise bir sonraki tıklama ASC olsun
+        }
+    }
+
+    // Hem ikonu hem de bir sonraki yönü dizi olarak döndürüyoruz
+    return ['icon' => $icon, 'nextDir' => $nextDir];
+}
 }

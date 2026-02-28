@@ -2,6 +2,31 @@
 namespace App\Helpers;
 
 class BadgeHelper {
+    /**
+ * Hastanın özellik badge'lerini (G, N, E) toplu olarak render eder
+ * @param object $patient Hasta nesnesi
+ * @return string HTML çıktısı
+ */
+public static function patientFeatures($patient) {
+    $badges = "";
+    
+    // Geçici Hasta (G)
+    if (!empty($patient->gecici)) {
+        $badges .= '<span class="badge bg-warning text-dark x-small me-1" title="Geçici Hasta" data-bs-toggle="tooltip">G</span>';
+    }
+    
+    // Not Mevcut (N)
+    if (!empty($patient->notes)) {
+        $badges .= '<span class="badge bg-info x-small me-1" title="Not Mevcut" data-bs-toggle="tooltip">N</span>';
+    }
+    
+    // E-Rapor (E)
+    if (!empty($patient->erapor)) {
+        $badges .= '<span class="badge bg-success x-small me-1" title="E-Raporlu" data-bs-toggle="tooltip">E</span>';
+    }
+
+    return $badges;
+}
 
     /**
      * Genel bir Badge (Etiket) oluşturur
@@ -39,10 +64,9 @@ class BadgeHelper {
      */
     public static function priority($val) {
         switch ($val) {
-            case 1: return self::render('Düşük', 'info');
-            case 2: return self::render('Normal', 'primary');
-            case 3: return self::render('Yüksek', 'warning');
-            case 4: return self::render('Acil', 'danger');
+            case 1: return self::render('Bağımsız', 'info');
+            case 2: return self::render('Yarı Bağımlı', 'primary');
+            case 3: return self::render('Tam Bağımlı', 'warning');
             default: return self::render('Belirsiz', 'secondary');
         }
     }

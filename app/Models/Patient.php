@@ -89,30 +89,87 @@ class Patient extends BaseModel {
         parent::__construct('esh_hastalar', 'id');
     }
 
-    /**
-     * Hastaları Adres Bilgileriyle Birlikte Listeler
-     * Senin alıştığın setQuery ve loadObjectList yapısını kullanır.
-     */
-    public function getAllActive($limit = 10, $offset = 0) {
-        $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
-                  FROM esh_hastalar h
-                  LEFT JOIN esh_adrestablosu i ON h.ilce = i.id
-                  LEFT JOIN esh_adrestablosu m ON h.mahalle = m.id
-                  WHERE pasif=0 ORDER BY h.id DESC";
-        
-        return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
-    }
+    public function countAllActive($search = '') {
+    $where = "WHERE h.pasif = 0";
+    // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
+    $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id";
     
-    //pasif hastaları getir
-    public function getAllPassive($limit = 10, $offset = 0) {
-        $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
-                  FROM esh_hastalar h
-                  LEFT JOIN esh_adrestablosu i ON h.ilce = i.id
-                  LEFT JOIN esh_adrestablosu m ON h.mahalle = m.id
-                  WHERE pasif=1 ORDER BY h.id DESC";
-        
-        return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
     }
+
+    return $this->db->setQuery($sql . " " . $where)->loadResult();
+}
+
+    public function getAllActive($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+    $where = "WHERE h.pasif = 0";
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    $sql = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
+            (SELECT izlemtarihi FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1 ORDER BY izlemtarihi DESC LIMIT 1) as sonizlemtarihi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1) as izlemsayisi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 0) as yizlemsayisi,
+            (SELECT COUNT(id) FROM esh_pizlemler WHERE hastatckimlik = h.tckimlik) as totalplanli
+            FROM esh_hastalar as h
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id
+            LEFT JOIN esh_adrestablosu as a2 ON h.mahalle = a2.id
+            LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
+            LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
+            {$where}
+            ORDER BY {$ordering}";
+    
+    return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
+}
+    //pasif hastaları getir
+    public function countAllPassive($search = '') {
+    $where = "WHERE h.pasif = 1";
+    // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
+    $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id";
+    
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    return $this->db->setQuery($sql . " " . $where)->loadResult();
+}
+
+public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+    $where = "WHERE h.pasif = 1";
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    $sql = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
+            (SELECT izlemtarihi FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1 ORDER BY izlemtarihi DESC LIMIT 1) as sonizlemtarihi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1) as izlemsayisi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 0) as yizlemsayisi,
+            (SELECT COUNT(id) FROM esh_pizlemler WHERE hastatckimlik = h.tckimlik) as totalplanli
+            FROM esh_hastalar as h
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id
+            LEFT JOIN esh_adrestablosu as a2 ON h.mahalle = a2.id
+            LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
+            LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
+            {$where}
+            ORDER BY {$ordering}";
+    
+    return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
+}
     
     public function getAllWaiting($limit = 10, $offset = 0) {
         $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
@@ -153,20 +210,8 @@ class Patient extends BaseModel {
         
         return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
     }
-
-    /**
-     * Toplam aktif hasta sayısını döndürür
-     */
-    public function countAllActive() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif=0";
-        return $this->db->setQuery($query)->loadResult();
-    }
     
-    // pasif hasta sayısı
-    public function countAllPassive() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif=1";
-        return $this->db->setQuery($query)->loadResult();
-    }
+
     
     public function countAllWaiting() {
         $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='-3'";

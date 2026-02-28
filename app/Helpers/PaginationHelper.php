@@ -43,43 +43,62 @@ class PaginationHelper {
     /**
      * Gelişmiş Sayfalama (Özet bilgi ile birlikte)
      */
-    public static function render($total, $current_page, $limit, $base_url) {
-        $total_pages = ceil($total / $limit);
-        if ($total_pages <= 1) {
-            return '<div class="text-muted small mt-3">' . self::infoText($total, $current_page, $limit) . '</div>';
-        }
+    /**
+     * Bootstrap 5 uyumlu ve URL parametrelerini koruyan sayfalama render metodu
+     */
+    public static function render($total_items, $current_page, $limit, $base_url) {
+        $total_pages = ceil($total_items / $limit);
+        if ($total_pages <= 1) return "";
 
-        $url_with_limit = "{$base_url}&limit={$limit}";
-
-        $html = '<div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">';
+        // 1. Mevcut tüm GET parametrelerini al ve kopyala
+        $params = $_GET;
         
-        // Sol Taraf: Özet Bilgi
-        $html .= '<div class="text-muted small mb-3 mb-md-0">';
-        $html .= self::infoText($total, $current_page, $limit);
-        $html .= '</div>';
+        // 2. Sayfalama linklerinde değişecek olan parametreleri temizle
+        // (Bu sayede linklerin üst üste binmesini önlüyoruz)
+        unset($params['page']);
+        $params['limit'] = $limit;
 
-        // Sağ Taraf: Sayfa Linkleri
-        $html .= '<nav aria-label="Page navigation">';
-        $html .= '<ul class="pagination pagination-sm mb-0">';
+        // 3. Mevcut sıralama bilgilerini URL'de tutmaya devam et
+        $params['orderby'] = $_GET['orderby'] ?? 'h.isim';
+        $params['orderdir'] = $_GET['orderdir'] ?? 'ASC';
+
+        // 4. Temel URL'yi oluştur (Sayfa numarası hariç kısım)
+        // parse_url ile base_url'in içindeki path'i (index.php) alıyoruz
+        $path = parse_url($base_url, PHP_URL_PATH) ?: 'index.php';
+        $final_base_url = $path . '?' . http_build_query($params);
+
+        $html = '<div class="d-flex align-items-center">';
+        $html .= '<nav aria-label="Page navigation"><ul class="pagination pagination-sm mb-0 shadow-sm">';
 
         // İlk ve Geri
         $disabled = ($current_page <= 1) ? 'disabled' : '';
-        $html .= "<li class='page-item {$disabled}'><a class='page-link' href='{$url_with_limit}&page=1' title='İlk Sayfa'>&laquo;</a></li>";
+        $prev_page = $current_page - 1;
+        $html .= "<li class='page-item {$disabled}'><a class='page-link' href='{$final_base_url}&page=1' title='İlk Sayfa'><i class='fa-solid fa-angles-left'></i></a></li>";
+        $html .= "<li class='page-item {$disabled}'><a class='page-link' href='{$final_base_url}&page={$prev_page}' title='Geri'><i class='fa-solid fa-angle-left'></i></a></li>";
 
-        // Sayfa Numaraları (Akıllı Sınırlandırma)
-        $start = max(1, $current_page - 5);
-        $end = min($total_pages, $current_page + 5);
+        // Sayfa Numaraları (Mevcut sayfanın 3 öncesi ve 3 sonrasını gösterir)
+        $start = max(1, $current_page - 3);
+        $end = min($total_pages, $current_page + 3);
 
         for ($i = $start; $i <= $end; $i++) {
-            $active = ($i == $current_page) ? 'active' : '';
-            $html .= "<li class='page-item {$active}'><a class='page-link' href='{$url_with_limit}&page={$i}'>{$i}</a></li>";
+            $active = ($current_page == $i) ? 'active' : '';
+            $html .= "<li class='page-item {$active}'><a class='page-link' href='{$final_base_url}&page={$i}'>{$i}</a></li>";
         }
 
         // İleri ve Son
         $disabled = ($current_page >= $total_pages) ? 'disabled' : '';
-        $html .= "<li class='page-item {$disabled}'><a class='page-link' href='{$url_with_limit}&page={$total_pages}' title='Son Sayfa'>&raquo;</a></li>";
+        $next_page = $current_page + 1;
+        $html .= "<li class='page-item {$disabled}'><a class='page-link' href='{$final_base_url}&page={$next_page}' title='İleri'><i class='fa-solid fa-angle-right'></i></a></li>";
+        $html .= "<li class='page-item {$disabled}'><a class='page-link' href='{$final_base_url}&page={$total_pages}' title='Son Sayfa'><i class='fa-solid fa-angles-right'></i></a></li>";
 
-        $html .= '</ul></nav></div>';
+        $html .= '</ul></nav>';
+        
+        // Hızlı Sayfaya Git (Jump to Page)
+        if ($total_pages > 5) {
+            $html .= self::jumpToPage($total_pages, $final_base_url);
+        }
+
+        $html .= '</div>';
 
         return $html;
     }
@@ -87,13 +106,14 @@ class PaginationHelper {
     /**
      * Sayfaya Git (Jump to Page) - Özellikle çok kayıtlı tablolarda hayat kurtarır
      */
-    public static function jumpToPage($total_pages, $base_url, $limit) {
-        if ($total_pages < 5) return ""; // Az sayfa varsa gerek yok
-
+    /**
+     * Hızlı sayfa geçiş girişi
+     */
+    private static function jumpToPage($total_pages, $url) {
         return '
-        <div class="input-group input-group-sm ms-3" style="width: 120px;">
-            <input type="number" id="jump_page" class="form-control" placeholder="Sfy..." min="1" max="'.$total_pages.'">
-            <button class="btn btn-outline-secondary" type="button" onclick="const p = document.getElementById(\'jump_page\').value; if(p > 0 && p <= '.$total_pages.') location.href=\''.$base_url.'&limit='.$limit.'&page=\'+p;">Git</button>
+        <div class="input-group input-group-sm ms-3" style="width: 130px;">
+            <input type="number" id="jump_page" class="form-control" placeholder="Sfy No" min="1" max="'.$total_pages.'">
+            <button class="btn btn-outline-primary" type="button" onclick="const p = document.getElementById(\'jump_page\').value; if(p > 0 && p <= '.$total_pages.') location.href=\''.$url.'&page=\'+p;">Git</button>
         </div>';
     }
     

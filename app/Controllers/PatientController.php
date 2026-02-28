@@ -14,48 +14,88 @@ class PatientController {
     
     // Aktif hastaları listeler pasif=0
     public function listactive() {
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+    // 1. Parametreleri Yakala
+    $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+    $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset   = ($page - 1) * $limit;
+    $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    
+    // 2. Sıralama Mantığı
+    $orderby  = $_GET['orderby'] ?? 'h.isim';
+    $orderdir = (isset($_GET['orderdir']) && strtoupper($_GET['orderdir']) === 'DESC') ? 'DESC' : 'ASC';
+    $ordering = $orderby . ' ' . $orderdir;
 
-        $model = new Patient();
-        
-        $totalPatients = $model->countAllActive(); 
-        $patients = $model->getAllActive($limit, $offset);
-        $totalPages = ceil($totalPatients / $limit);
-        
-        $pagelink = "index.php?controller=Patient&action=listactive";
-        $viewlink = "index.php?controller=Patient&action=view&id=";
-        $editlink = "index.php?controller=Patient&action=edit&id=";
-        $deletelink = "index.php?controller=Patient&action=delete&id="; 
+    // 3. Model İşlemleri
+    $model = new Patient();
+    // Toplam sayıyı alırken aramayı gönder (Pagination'ın bozulmaması için)
+    $totalPatients = $model->countAllActive($search); 
+    
+    // Listeyi alırken aramayı gönder
+    $patients = $model->getAllActive($limit, $offset, $ordering, $search);
+    
+    // 4. Link Yapılandırması
+    // Sıralama ve limit bilgilerini pagelink'e eklemiyoruz çünkü 
+    // PaginationHelper::render artık bunları $_GET üzerinden otomatik temizleyip ekliyor.
+    $pagelink = "index.php?controller=Patient&action=listactive";
+    if (isset($search)) {
+    $pagelink .= "&search=".$search;
+    }
+    
+    $viewlink   = "index.php?controller=Patient&action=view&id=";
+    $editlink   = "index.php?controller=Patient&action=edit&id=";
+    $deletelink = "index.php?controller=Patient&action=delete&id="; 
 
-        $pageTitle = "Aktif Hasta Listesi";
-        include '../views/partials/header.php';
-        include '../views/site/hasta/liste.php';
-        include '../views/partials/footer.php';
+    // 5. View'a Gönderilecek Ek Değişkenler
+    $pageTitle = "Aktif Hasta Listesi";
+    
+    // View'da sortIcon() fonksiyonunun çalışması için $ordering değişkeni lazım
+    // View dosyasına (liste.php) dahil ediyoruz
+    include '../views/partials/header.php';
+    include '../views/site/hasta/listactive.php';
+    include '../views/partials/footer.php';
     }
     
     //Pasif hastaları listeler pasif=1
     public function listpassive() {
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+    // 1. Parametreleri Yakala
+    $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+    $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset   = ($page - 1) * $limit;
+    $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    
+    // 2. Sıralama Mantığı
+    $orderby  = $_GET['orderby'] ?? 'h.isim';
+    $orderdir = (isset($_GET['orderdir']) && strtoupper($_GET['orderdir']) === 'DESC') ? 'DESC' : 'ASC';
+    $ordering = $orderby . ' ' . $orderdir;
 
-        $model = new Patient();
-        
-        $totalPatients = $model->countAllPassive(); 
-        $patients = $model->getAllPassive($limit, $offset);
-        $totalPages = ceil($totalPatients / $limit);
-        
-        $pagelink = "index.php?controller=Patient&action=listpassive";
-        $viewlink = "index.php?controller=Patient&action=view&id=";
-        $editlink = "index.php?controller=Patient&action=edit&id=";
-        $deletelink = "";
+    // 3. Model İşlemleri
+    $model = new Patient();
+    // Toplam sayıyı alırken aramayı gönder (Pagination'ın bozulmaması için)
+    $totalPatients = $model->countAllPassive($search); 
+    
+    // Listeyi alırken aramayı gönder
+    $patients = $model->getAllPassive($limit, $offset, $ordering, $search);
+    
+    // 4. Link Yapılandırması
+    // Sıralama ve limit bilgilerini pagelink'e eklemiyoruz çünkü 
+    // PaginationHelper::render artık bunları $_GET üzerinden otomatik temizleyip ekliyor.
+    $pagelink = "index.php?controller=Patient&action=listpassive";
+    if (isset($search)) {
+    $pagelink .= "&search=".$search;
+    }
+    
+    $viewlink   = "index.php?controller=Patient&action=view&id=";
+    $editlink   = "index.php?controller=Patient&action=edit&id=";
+    $deletelink = "index.php?controller=Patient&action=delete&id="; 
 
-        $pageTitle = "Pasif Hasta Listesi";
-        include '../views/partials/header.php';
-        include '../views/site/hasta/liste.php';
-        include '../views/partials/footer.php';
+    // 5. View'a Gönderilecek Ek Değişkenler
+    $pageTitle = "Pasif Hasta Listesi";
+    
+    // View'da sortIcon() fonksiyonunun çalışması için $ordering değişkeni lazım
+    // View dosyasına (liste.php) dahil ediyoruz
+    include '../views/partials/header.php';
+    include '../views/site/hasta/listpassive.php';
+    include '../views/partials/footer.php';
     }
     
     //Ölen hastaları listeler pasif=-1
