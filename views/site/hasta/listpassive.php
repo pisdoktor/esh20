@@ -1,30 +1,68 @@
 <div class="container-fluid py-4">
     <div class="row align-items-center mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <h4 class="fw-bold text-dark mb-0">
-                <i class="fa-solid fa-hospital-user text-primary me-2"></i><?= $pageTitle;?>
+                <i class="fa-solid fa-user-slash text-secondary me-2"></i><?= $pageTitle; ?>
             </h4>
+            <small class="text-muted">Pasif kayıtlar üzerinde filtreleme yapın</small>
         </div>
-        <div class="col-md-5">
-            <form action="index.php" method="GET" class="d-flex shadow-sm rounded-pill overflow-hidden bg-white p-1">
+        
+        <div class="col-md-9">
+            <form action="index.php" method="GET" class="row g-2">
                 <input type="hidden" name="controller" value="Patient">
                 <input type="hidden" name="action" value="listpassive">
-                <input type="text" name="search" class="form-control border-0 px-3" 
-                       placeholder="İsim, soyisim veya TC ile ara..." 
-                       value="<?= htmlspecialchars($search ?? '') ?>">
-                <button type="submit" class="btn btn-primary rounded-pill px-4">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
+
+                <div class="col-md-5">
+                    <div class="d-flex shadow-sm rounded-pill overflow-hidden bg-white p-1 border">
+                        <input type="text" name="search" class="form-control border-0 px-3" 
+                               placeholder="İsim, soyisim veya TC..." 
+                               value="<?= htmlspecialchars($search ?? '') ?>">
+                        
+                        <select name="reason" class="form-select border-0 bg-light ms-1" style="width: 150px; border-radius: 20px;">
+                            <option value="">Tüm Nedenler</option>
+                            <?php foreach ($pasifListesi as $k => $neden): ?>
+                                <option value="<?= $k ?>" <?= ($reason == $k) ? 'selected' : '' ?>><?= $neden ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+    <div class="input-group input-group-sm shadow-sm h-100 border rounded-pill overflow-hidden" id="datepicker-range">
+        <span class="input-group-text bg-white border-0 px-3">
+            <i class="fa-solid fa-calendar-days text-primary"></i>
+        </span>
+        
+        <input type="text" name="startDate" class="form-control border-0 datepicker bg-white" 
+               value="<?= $startDate ?>" placeholder="Başlangıç" autocomplete="off">
+        
+        <span class="input-group-text bg-white border-0 small px-1 text-muted"> - </span>
+        
+        <input type="text" name="endDate" class="form-control border-0 datepicker bg-white" 
+               value="<?= $endDate ?>" placeholder="Bitiş" autocomplete="off">
+    </div>
+</div>
+
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary rounded-pill flex-grow-1 shadow-sm">
+                        <i class="fa-solid fa-filter me-1"></i>
+                    </button>
+                </div>
             </form>
-        </div>
-        <div class="col-md-3 text-end">
         </div>
     </div>
 
-    <?php if(!empty($search)): ?>
-        <div class="alert alert-info py-2 d-flex justify-content-between align-items-center rounded-4 mb-3">
-            <span><strong>"<?= htmlspecialchars($search) ?>"</strong> araması için <strong><?= $totalPatients ?></strong> sonuç bulundu.</span>
-            <a href="index.php?controller=Patient&action=listpassive" class="btn btn-sm btn-outline-info rounded-pill">Aramayı Temizle</a>
+    <?php if(!empty($search) || !empty($reason) || !empty($startDate)): ?>
+        <div class="alert alert-light border py-2 px-4 d-flex justify-content-between align-items-center rounded-4 mb-3 shadow-sm">
+            <div class="small">
+                <?php if($search): ?> <strong>"<?= htmlspecialchars($search) ?>"</strong> araması, <?php endif; ?>
+                <?php if($reason): ?> <strong><?= $pasifListesi[$reason] ?></strong> nedeni, <?php endif; ?>
+                <?php if($startDate): ?> <strong><?= $startDate ?> / <?= $endDate ?></strong> tarihleri arası, <?php endif; ?>
+                için <strong><?= $totalPatients ?></strong> sonuç bulundu.
+            </div>
+            <a href="index.php?controller=Patient&action=listpassive" class="btn btn-sm btn-link text-danger text-decoration-none p-0">
+                <i class="fa-solid fa-trash-can me-1"></i>Temizle
+            </a>
         </div>
     <?php endif; ?>
 
@@ -65,7 +103,6 @@
             </a>
         </th>
         
-        <th>İletişim</th>
         <?php $sort = \App\Helpers\UIHelper::sortIcon('h.kayittarihi', $ordering);?>
         <th>
             <a href="<?= $pagelink ?>&orderby=h.kayittarihi&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
@@ -76,6 +113,18 @@
         <th class="pe-3">
             <a href="<?= $pagelink ?>&orderby=sonizlemtarihi&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
                 Son İzlem <?= $sort['icon']; ?>
+            </a>
+        </th>
+        <?php $sort = \App\Helpers\UIHelper::sortIcon('h.pasiftarihi', $ordering);?>
+        <th class="pe-3">
+            <a href="<?= $pagelink ?>&orderby=h.pasiftarihi&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
+                Pasif Tarihi<?= $sort['icon']; ?>
+            </a>
+        </th>
+        <?php $sort = \App\Helpers\UIHelper::sortIcon('h.pasifnedeni', $ordering);?>
+        <th class="pe-3">
+            <a href="<?= $pagelink ?>&orderby=h.pasifnedeni&orderdir=<?= $sort['nextDir'] ?>" class="text-decoration-none text-dark">
+                Pasif Nedeni<?= $sort['icon']; ?>
             </a>
         </th>
     </tr>
@@ -119,8 +168,6 @@
                     <li><a class="dropdown-item" href="index.php?controller=Patient&action=edit&id=<?= $patient->id ?>"><i class="fa-solid fa-pen-to-square text-warning me-2"></i> Bilgileri Düzenle</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="index.php?controller=Visit&action=history&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-list-check text-info me-2"></i> İzlem Geçmişi</a></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Visit&action=create&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-plus text-success me-2"></i> Yeni İzlem Gir</a></li>
-                    <li><a class="dropdown-item" href="index.php?controller=PlannedVisit&action=create&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-calendar-plus text-info me-2"></i> İzlem Planla</a></li>
                 </ul>
             </div> 
         </td>
@@ -162,27 +209,18 @@
                 <?= \App\Helpers\DateHelper::calculateAge($patient->dogumtarihi) ?> Yaş
             </span>
         </td> 
-        
-        <td style="vertical-align: middle;">
-            <?php if(!empty($patient->ceptel1)): ?>
-                <div class="small">
-                    <i class="fa-solid fa-mobile-screen text-success me-1"></i>
-                    <a href="tel:<?= $patient->ceptel1 ?>" class="text-decoration-none text-dark"><?= $patient->ceptel1 ?></a>
-                </div>
-            <?php endif; ?>
-            <?php if(!empty($patient->ceptel2)): ?>
-                <div class="x-small text-muted">
-                    <i class="fa-solid fa-phone me-1"></i>
-                    <a href="tel:<?= $patient->ceptel2 ?>" class="text-decoration-none text-muted"><?= $patient->ceptel2 ?></a>
-                </div>
-            <?php endif; ?>
-        </td>
 
         <td style="vertical-align: middle;" class="x-small text-muted">
             <?= \App\Helpers\DateHelper::toTr($patient->kayittarihi) ?>
         </td>
-        <td style="vertical-align: middle;" class="small fw-bold <?= empty($patient->sonizlemtarihi) ? 'text-danger' : 'text-success' ?>">
+        <td style="vertical-align: middle;" class="x-small text-muted <?= empty($patient->sonizlemtarihi) ? 'text-danger' : 'text-success' ?>">
             <?= !empty($patient->sonizlemtarihi) ? \App\Helpers\DateHelper::toTr($patient->sonizlemtarihi) : 'İzlem Yok' ?>
+        </td>
+        <td style="vertical-align: middle;" class="x-small text-muted <?= empty($patient->pasiftarihi) ? 'text-danger' : 'text-success' ?>">
+            <?= !empty($patient->pasiftarihi) ? \App\Helpers\DateHelper::toTr($patient->pasiftarihi) : 'Tarih Yok' ?>
+        </td>
+        <td style="vertical-align: middle;" class="x-small fw-bold <?= empty($patient->pasifnedeni) ? 'text-danger' : 'text-success' ?>">
+            <?= !empty($patient->pasifnedeni) ?  $pasifListesi[$patient->pasifnedeni] : 'Neden Yok' ?>
         </td>
     </tr> 
 <?php endforeach; ?>
@@ -209,7 +247,21 @@
         
     </div>
 </div>
+<script>
+$(document).ready(function() {
+    // Başlangıç tarihi değiştiğinde bitiş tarihinin minimumunu güncelle
+    $('input[name="startDate"]').on('changeDate', function(selected) {
+        var minDate = new Date(selected.date.valueOf());
+        $('input[name="endDate"]').datepicker('setStartDate', minDate);
+    });
 
+    // Bitiş tarihi değiştiğinde başlangıç tarihinin maksimumunu güncelle
+    $('input[name="endDate"]').on('changeDate', function(selected) {
+        var maxDate = new Date(selected.date.valueOf());
+        $('input[name="startDate"]').datepicker('setEndDate', maxDate);
+    });
+});
+</script>
 <style>
     .table thead th { 
         font-size: 0.75rem; 

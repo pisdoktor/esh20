@@ -30,19 +30,28 @@
                                 <input type="text" name="babaAdi" class="form-control" value="<?= $patient->babaAdi ?>">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold text-muted">Cinsiyet</label>
-                                <select name="cinsiyet" class="form-select">
-                                    <option value="1" <?= $patient->cinsiyet == '1' ? 'selected':'' ?>>Erkek</option>
-                                    <option value="2" <?= $patient->cinsiyet == '2' ? 'selected':'' ?>>Kadın</option>
-                                </select>
-                            </div>
+    <label class="form-label small fw-bold text-muted d-block">Cinsiyet</label>
+    <div class="btn-group w-100" role="group" aria-label="Cinsiyet Seçimi">
+        <input type="radio" class="btn-check" name="cinsiyet" id="genderMale" value="1" 
+            <?= ($patient->cinsiyet == '1' || empty($patient->cinsiyet)) ? 'checked' : '' ?> autocomplete="off">
+        <label class="btn btn-outline-primary shadow-sm py-2" for="genderMale">
+            <i class="fa-solid fa-mars me-1"></i> Erkek
+        </label>
+
+        <input type="radio" class="btn-check" name="cinsiyet" id="genderFemale" value="2" 
+            <?= ($patient->cinsiyet == '2') ? 'checked' : '' ?> autocomplete="off">
+        <label class="btn btn-outline-danger shadow-sm py-2" for="genderFemale">
+            <i class="fa-solid fa-venus me-1"></i> Kadın
+        </label>
+    </div>
+</div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-muted">Doğum Tarihi</label>
-                                <input type="date" name="dogumtarihi" class="form-control" value="<?= $patient->dogumtarihi ?>">
+                                <input type="text" name="dogumtarihi" class="form-control datepicker" value="<?= !empty($patient->dogumtarihi) ? date('d.m.Y', strtotime($patient->dogumtarihi)) : '' ?>" placeholder="GG.AA.YYYY">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-muted">Kayıt Tarihi</label>
-                                <input type="date" name="kayittarihi" class="form-control" value="<?= $patient->kayittarihi ?? date('Y-m-d') ?>">
+                                <input type="text" name="kayittarihi" class="form-control datepicker" value="<?= !empty($patient->kayittarihi) ? date('d.m.Y', strtotime($patient->kayittarihi)) : date('d.m.Y') ?>" placeholder="GG.AA.YYYY">
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label small fw-bold text-muted">Güvence</label>
@@ -111,31 +120,41 @@
                 </div>
 
                 <div class="card shadow-sm mb-4 border-0">
-                    <div class="card-header bg-dark text-white fw-bold py-3 small"><i class="fa-solid fa-chart-line me-2"></i> Barthel İndeksi (Bağımlılık Durumu)</div>
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <?php 
-                            $barthelFields = [
-                                'barbeslenme' => 'Beslenme', 'barbanyo' => 'Banyo', 'barbakim' => 'Kişisel Bakım', 
-                                'bargiyinme' => 'Giyinme', 'barbarsak' => 'Bağırsak', 'barmesane' => 'Mesane', 
-                                'bartuvalet' => 'Tuvalet', 'bartransfer' => 'Transfer', 'barmobilite' => 'Mobilite', 
-                                'barmerdiven' => 'Merdiven'
-                            ];
-                            foreach($barthelFields as $key => $label): ?>
-                                <div class="col-md-6">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text w-50 small fw-bold"><?= $label ?></span>
-                                        <input type="number" name="<?= $key ?>" class="form-control" value="<?= $patient->$key ?>" min="0" max="15">
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                            <div class="col-12 mt-2">
-                                <label class="small fw-bold">Genel Bağımlılık Skoru / Notu</label>
-                                <input type="text" name="bagimlilik" class="form-control" value="<?= $patient->bagimlilik ?>" placeholder="Skor veya açıklama giriniz">
-                            </div>
-                        </div>
-                    </div>
+    <div class="card-header bg-dark text-white fw-bold py-3 small d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-chart-line me-2"></i> Barthel İndeksi</span>
+        <span class="badge bg-light text-dark shadow-sm" id="barthel-total-badge">Toplam Skor: 0</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-2" id="barthel-fields-container">
+            <?php 
+            foreach($barthelFields as $key => $data): ?>
+    <div class="col-md-6">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text w-50 small fw-bold" 
+                  data-bs-toggle="tooltip" 
+                  data-bs-placement="top" 
+                  title="<?= $data['desc'] ?>" 
+                  style="cursor: help;">
+                <?= $data['label'] ?> <i class="fa-solid fa-circle-info ms-1 text-muted opacity-50"></i>
+            </span>
+            <input type="number" name="<?= $key ?>" class="form-control barthel-input" 
+                   value="<?= (int)$patient->$key ?>" min="0" max="<?= $data['max'] ?>">
+        </div>
+    </div>
+<?php endforeach; ?>
+            <div class="col-12 mt-3">
+                <div class="alert alert-info py-2 mb-2 d-flex justify-content-between align-items-center">
+                    <span class="small fw-bold">Bağımlılık Durumu:</span>
+                    <span id="barthel-status" class="fw-bold small">-</span>
                 </div>
+                <label class="small fw-bold">Genel Not</label>
+                <input type="text" name="bagimlilik" id="bagimlilik-input" class="form-control" 
+                       value="<?= $patient->bagimlilik ?>" placeholder="Skor otomatik hesaplanır...">
+            </div>
+        </div>
+    </div>
+</div>
+
             </div>
 
             <div class="col-lg-6">
@@ -154,13 +173,25 @@
                             <?php endforeach; ?>
                             <div class="col-12"><hr class="my-2 text-muted"></div>
                             <div class="col-md-6">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="sonda" value="1" id="sondaCheck" <?= $patient->sonda ? 'checked':'' ?>>
-                                    <label class="form-check-label small fw-bold">Sonda Takılı mı?</label>
-                                </div>
-                                <label class="x-small text-muted d-block">Sonda Tarihi</label>
-                                <input type="date" name="sondatarihi" class="form-control form-control-sm" value="<?= $patient->sondatarihi ?>">
-                            </div>
+    <label class="form-label small fw-bold text-muted d-block">Sonda Takılı mı?</label>
+    <div class="btn-group w-100 mb-2" role="group">
+        <input type="radio" class="btn-check" name="sonda" id="sondaYok" value="0" <?= !$patient->sonda ? 'checked' : '' ?>>
+        <label class="btn btn-outline-secondary btn-sm" for="sondaYok">Hayır</label>
+
+        <input type="radio" class="btn-check" name="sonda" id="sondaVar" value="1" <?= $patient->sonda ? 'checked' : '' ?>>
+        <label class="btn btn-outline-primary btn-sm" for="sondaVar">Evet</label>
+    </div>
+
+    <div id="sondaTarihiArea" style="<?= !$patient->sonda ? 'display: none;' : '' ?>">
+        <label class="x-small text-muted d-block">Sonda Değişim / Takılma Tarihi</label>
+        <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fa-solid fa-calendar-day"></i></span>
+            <input type="text" name="sondatarihi" class="form-control datepicker" 
+                   value="<?= !empty($patient->sondatarihi) ? date('d.m.Y', strtotime($patient->sondatarihi)) : '' ?>" 
+                   placeholder="GG.AA.YYYY">
+        </div>
+    </div>
+</div>
                         </div>
                     </div>
                 </div>
@@ -170,34 +201,56 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6 border-end border-light">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="mama" value="1" <?= $patient->mama ? 'checked':'' ?>>
-                                    <label class="form-check-label small fw-bold">Mama Kullanımı</label>
-                                </div>
-                                <input type="text" name="mamacesit" class="form-control form-control-sm mb-1" placeholder="Mama Çeşidi" value="<?= $patient->mamacesit ?>">
-                                <input type="date" name="mamaraporbitis" class="form-control form-control-sm mb-1" title="Rapor Bitiş Tarihi" value="<?= $patient->mamaraporbitis ?>">
-                                <input type="text" name="mamaraporyeri" class="form-control form-control-sm" placeholder="Rapor Yeri" value="<?= $patient->mamaraporyeri ?>">
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="bez" value="1" <?= $patient->bez ? 'checked':'' ?>>
-                                    <label class="form-check-label small fw-bold">Bez Kullanımı</label>
-                                </div>
-                                <div class="form-check mb-1">
-                                    <input class="form-check-input" type="checkbox" name="bezrapor" value="1" <?= $patient->bezrapor ? 'checked':'' ?>>
-                                    <label class="form-check-label small">Bezi Raporu Var mı?</label>
-                                </div>
-                                <input type="date" name="bezraporbitis" class="form-control form-control-sm" title="Bez Rapor Bitiş" value="<?= $patient->bezraporbitis ?>">
-                            </div>
+                <label class="form-label small fw-bold text-muted d-block">Mama Kullanımı</label>
+                <div class="btn-group w-100 mb-3" role="group">
+                    <input type="radio" class="btn-check" name="mama" id="mamaYok" value="0" <?= !$patient->mama ? 'checked' : '' ?>>
+                    <label class="btn btn-outline-secondary btn-sm" for="mamaYok">Hayır</label>
+
+                    <input type="radio" class="btn-check" name="mama" id="mamaVar" value="1" <?= $patient->mama ? 'checked' : '' ?>>
+                    <label class="btn btn-outline-primary btn-sm" for="mamaVar">Evet</label>
+                </div>
+
+                <div id="mamaDetailsArea" style="<?= !$patient->mama ? 'display: none;' : '' ?>">
+                    <input type="text" name="mamacesit" class="form-control form-control-sm mb-1" placeholder="Mama Çeşidi" value="<?= $patient->mamacesit ?>">
+                    <input type="text" name="mamaraporbitis" class="form-control form-control-sm mb-1 datepicker" title="Rapor Bitiş Tarihi" value="<?= !empty($patient->mamaraporbitis) ? date('d.m.Y', strtotime($patient->mamaraporbitis)) : '' ?>" placeholder="Rapor Bitiş GG.AA.YYYY">
+                    <input type="text" name="mamaraporyeri" class="form-control form-control-sm" placeholder="Rapor Yeri" value="<?= $patient->mamaraporyeri ?>">
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted d-block">Bez Kullanımı</label>
+                <div class="btn-group w-100 mb-3" role="group">
+                    <input type="radio" class="btn-check" name="bez" id="bezYok" value="0" <?= !$patient->bez ? 'checked' : '' ?>>
+                    <label class="btn btn-outline-secondary btn-sm" for="bezYok">Hayır</label>
+
+                    <input type="radio" class="btn-check" name="bez" id="bezVar" value="1" <?= $patient->bez ? 'checked' : '' ?>>
+                    <label class="btn btn-outline-primary btn-sm" for="bezVar">Evet</label>
+                </div>
+
+                <div id="bezDetailsArea" style="<?= !$patient->bez ? 'display: none;' : '' ?>">
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" name="bezrapor" value="1" <?= $patient->bezrapor ? 'checked' : '' ?>>
+                        <label class="form-check-label small">Bezi Raporu Var mı?</label>
+                    </div>
+                    <input type="text" name="bezraporbitis" class="form-control form-control-sm datepicker" title="Bez Rapor Bitiş" value="<?= !empty($patient->bezraporbitis) ? date('d.m.Y', strtotime($patient->bezraporbitis)) : '' ?>" placeholder="Bez Rapor Bitiş GG.AA.YYYY">
+                </div>
+            </div>
                             <div class="col-12"><hr class="my-2"></div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" name="pansuman" value="1" <?= $patient->pansuman ? 'checked':'' ?>>
-                                    <label class="form-check-label small fw-bold">Pansuman</label>
-                                </div>
-                                <input type="text" name="pgunleri" class="form-control form-control-sm mb-1" placeholder="Günler (Örn: Pzt-Per)" value="<?= $patient->pgunleri ?>">
-                                <input type="text" name="pzaman" class="form-control form-control-sm" placeholder="Zaman (Örn: Sabah)" value="<?= $patient->pzaman ?>">
-                            </div>
+                            <div class="col-md-6 border-start border-light">
+    <label class="form-label small fw-bold text-muted d-block">Pansuman</label>
+    <div class="btn-group w-100 mb-2" role="group">
+        <input type="radio" class="btn-check" name="pansuman" id="pansumanYok" value="0" <?= !$patient->pansuman ? 'checked' : '' ?>>
+        <label class="btn btn-outline-secondary btn-sm" for="pansumanYok">Hayır</label>
+
+        <input type="radio" class="btn-check" name="pansuman" id="pansumanVar" value="1" <?= $patient->pansuman ? 'checked' : '' ?>>
+        <label class="btn btn-outline-primary btn-sm" for="pansumanVar">Evet</label>
+    </div>
+    
+    <div id="pansumanDetailsArea" style="<?= !$patient->pansuman ? 'display: none;' : '' ?>">
+        <input type="text" name="pgunleri" class="form-control form-control-sm mb-1" placeholder="Günler (Örn: Pzt-Per)" value="<?= $patient->pgunleri ?>">
+        <input type="text" name="pzaman" class="form-control form-control-sm" placeholder="Zaman (Örn: Sabah)" value="<?= $patient->pzaman ?>">
+    </div>
+</div>
                             <div class="col-md-6">
                                 <div class="form-check form-switch mb-2">
                                     <input class="form-check-input" type="checkbox" name="yatak" value="1" <?= $patient->yatak ? 'checked':'' ?>>
@@ -213,17 +266,28 @@
                     <div class="card-body py-2">
                         <div class="row align-items-center g-2">
                             <div class="col-md-4">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="pasif" value="1" id="pasifSwitch" <?= $patient->pasif ? 'checked':'' ?>>
-                                    <label class="form-check-label small fw-bold text-danger">Dosya Pasif</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="date" name="pasiftarihi" class="form-control form-control-sm" value="<?= $patient->pasiftarihi ?>">
-                            </div>
-                            <div class="col-md-4">
-                                <input type="text" name="pasifnedeni" class="form-control form-control-sm" placeholder="Pasif Nedeni" value="<?= $patient->pasifnedeni ?>">
-                            </div>
+                <label class="form-label small fw-bold text-muted d-block">Dosya Aktif mi?</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="pasif" id="pasifHayir" value="0" <?= !$patient->pasif ? 'checked' : '' ?>>
+                    <label class="btn btn-outline-success btn-sm" for="pasifHayir">Aktif</label>
+
+                    <input type="radio" class="btn-check" name="pasif" id="pasifEvet" value="1" <?= $patient->pasif ? 'checked' : '' ?>>
+                    <label class="btn btn-outline-danger btn-sm" for="pasifEvet">Pasif</label>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div id="pasifDetailsArea" style="<?= !$patient->pasif ? 'display: none;' : '' ?>">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" name="pasiftarihi" class="form-control form-control-sm datepicker" value="<?= !empty($patient->pasiftarihi) ? date('d.m.Y', strtotime($patient->pasiftarihi)) : '' ?>" placeholder="Pasif Tarihi">
+                        </div>
+                        <div class="col-6">
+                            <input type="text" name="pasifnedeni" class="form-control form-control-sm" placeholder="Pasif Nedeni" value="<?= $patient->pasifnedeni ?>">
+                        </div>
+                    </div>
+                </div>
+            </div>
                         </div>
                     </div>
                 </div>
@@ -258,9 +322,15 @@
 
 <script>
 $(document).ready(function() {
-    // Chosen Initialization
+    // Chosen Initialization (Global JS'deki ayarlarla uyumlu)
     function initChosen() {
-        $('.chosen-select').chosen({ width: '100%', allow_single_deselect: true });
+        $('.chosen-select').chosen({ 
+            width: '100%', 
+            allow_single_deselect: true,
+            no_results_text: "Sonuç bulunamadı: ",
+            placeholder_text_single: "Seçiniz...",
+            placeholder_text_multiple: "Hastalıkları seçiniz..."
+        });
     }
     initChosen();
 
@@ -271,7 +341,6 @@ $(document).ready(function() {
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
-                // İlk hatalı alana odaklan
                 $('html, body').animate({
                     scrollTop: $(form).find(":invalid").first().offset().top - 100
                 }, 200);
@@ -280,14 +349,12 @@ $(document).ready(function() {
         }, false);
     });
 
-    // Cascade Ajax Handler (Generic)
+    // Cascade Ajax Handler
     function handleCascadeChange(triggerSelector, targetSelector, type, nextPlaceholder) {
         $(document).on('change', triggerSelector, function() {
             const parentId = $(this).val();
             const $row = $(this).closest('.row');
             const $targetSelect = $row.find(targetSelector);
-            
-            // Altındaki tüm bağımlı selectleri sıfırla
             const $allTargets = $row.find('.mahalle-target, .sokak-target, .kapino-target').slice($row.find('.mahalle-target, .sokak-target, .kapino-target').index($targetSelect));
             
             if(parentId) {
@@ -310,7 +377,6 @@ $(document).ready(function() {
     // Çoklu Adres Ekleme
     let addrCount = 1;
     $('#btn-add-address').click(function() {
-        // İlk ilçeyi klonlamak yerine temiz bir html template kullanmak daha güvenlidir
         const ilceOptions = $('.ilce-trigger').first().html();
         const html = `
         <div class="p-4 border rounded bg-white mb-3 position-relative shadow-sm border-start border-success border-4 animate__animated animate__fadeIn">
@@ -356,14 +422,67 @@ $(document).ready(function() {
         }
     });
 });
-</script>
 
-<style>
-    /* Küçük UX dokunuşları için CSS */
-    .card { transition: all 0.3s ease; }
-    .form-control:focus, .form-select:focus { border-color: #80bdff; box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15); }
-    .x-small { font-size: 0.75rem; }
-    .sticky-bottom { z-index: 1020; border-top: 1px solid #dee2e6; }
-    .custom-switch .form-check-input { width: 2.5em; cursor: pointer; }
-    .address-row { border-left: 4px solid #198754 !important; }
-</style>
+$(document).ready(function() {
+    
+    // Ortak Slide Fonksiyonu (Daha temiz bir kod için)
+    function toggleSlide(inputName, targetId) {
+        $(document).on('change', `input[name="${inputName}"]`, function() {
+            if ($(this).val() == '1') {
+                $(`#${targetId}`).slideDown(300);
+            } else {
+                $(`#${targetId}`).slideUp(300);
+                // İsteğe bağlı: Kapandığında içindeki inputları temizlemek istersen:
+                // $(`#${targetId} input`).val(''); 
+            }
+        });
+    }
+
+    // Tetikleyicileri Başlat
+    toggleSlide('sonda', 'sondaTarihiArea');
+    toggleSlide('mama', 'mamaDetailsArea');
+    toggleSlide('bez', 'bezDetailsArea');
+    toggleSlide('pansuman', 'pansumanDetailsArea');
+    toggleSlide('pasif', 'pasifDetailsArea'); // Dosya Pasif seçilirse (val:1) detaylar açılır
+
+});
+
+$(document).ready(function() {
+    function calculateBarthel() {
+        let total = 0;
+        
+        // Tüm barthel inputlarını topla
+        $('.barthel-input').each(function() {
+            let val = parseInt($(this).val()) || 0;
+            total += val;
+        });
+
+        // Skor badge'ini güncelle
+        $('#barthel-total-badge').text('Toplam Skor: ' + total);
+        
+        // Bağımlılık durumunu belirle
+        let status = '';
+        let colorClass = '';
+
+        if (total <= 20) { status = 'Tam Bağımlı'; colorClass = 'text-danger'; }
+        else if (total <= 60) { status = 'İleri Derecede Bağımlı'; colorClass = 'text-warning'; }
+        else if (total <= 90) { status = 'Orta Derecede Bağımlı'; colorClass = 'text-info'; }
+        else if (total <= 99) { status = 'Hafif Derecede Bağımlı'; colorClass = 'text-primary'; }
+        else { status = 'Tam Bağımsız'; colorClass = 'text-success'; }
+
+        // Görsel güncellemeler
+        $('#barthel-status').text(status).removeClass().addClass('fw-bold small ' + colorClass);
+        
+        // İstersen otomatik olarak "bagimlilik" inputuna da yazdırabilirsin
+        $('#bagimlilik-input').val(total + ' Puan - ' + status);
+    }
+
+    // Herhangi bir input değiştiğinde hesapla
+    $(document).on('input change', '.barthel-input', function() {
+        calculateBarthel();
+    });
+
+    // Sayfa açıldığında ilk hesaplamayı yap (Düzenleme modu için)
+    calculateBarthel();
+});
+</script>

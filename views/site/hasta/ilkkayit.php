@@ -63,7 +63,7 @@
                                 <label class="form-label fw-bold">Doğum Tarihi:</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white"><i class="fa-solid fa-calendar-day"></i></span>
-                                    <input type="text" id="dogumtarihi" name="dogumtarihi" class="form-control datepicker" placeholder="GG.AA.YYYY" required readonly style="background-color: #fff;">
+                                    <input type="text" id="dogumtarihi" name="dogumtarihi" class="form-control datepicker" placeholder="GG.AA.YYYY"  autocomplete="off" required style="background-color: #fff;">
                                 </div>
                             </div>
                             <div class="mb-0">
@@ -167,14 +167,14 @@
                                     <label class="form-label fw-bold">Sisteme Kayıt Tarihi:</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa-solid fa-calendar-check text-success"></i></span>
-                                        <input type="text" name="kayittarihi" class="form-control datepicker" value="<?php echo date('d.m.Y'); ?>" required readonly style="background-color: #fff;">
+                                        <input type="text" name="kayittarihi" class="form-control datepicker" value="<?php echo date('d.m.Y'); ?>" required style="background-color: #fff;">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">İlk Randevu Tarihi:</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa-solid fa-calendar-plus text-info"></i></span>
-                                        <input type="text" name="randevutarihi" class="form-control datepicker" placeholder="GG.AA.YYYY" readonly style="background-color: #fff;">
+                                        <input type="text" name="randevutarihi" class="form-control datepicker" placeholder="GG.AA.YYYY" autocomplete="off" style="background-color: #fff;">
                                     </div>
                                 </div>
                                 <div class="col-12">

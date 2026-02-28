@@ -31,37 +31,22 @@ class UIHelper {
                             <ul class="dropdown-menu shadow border-0" aria-labelledby="hastaMenu">
                                 <li>
                                     <a class="dropdown-item" href="index.php?controller=Patient&action=listactive">
-                                        <i class="fa-solid fa-users me-2"></i>Aktif Hasta Listesi
+                                        <i class="fa-solid fa-user-check text-success me-2"></i>Aktif Hasta Listesi
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="index.php?controller=Patient&action=listpassive">
-                                        <i class="fa-solid fa-users me-2"></i>Pasif Hasta Listesi
+                                        <i class="fa-solid fa-user-slash text-secondary me-2"></i>Pasif Hasta Listesi
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="index.php?controller=Patient&action=listwaiting">
-                                        <i class="fa-solid fa-users me-2"></i>Bekleyen Hasta Listesi
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="index.php?controller=Patient&action=listdeleted">
-                                        <i class="fa-solid fa-users me-2"></i>Silinen Hasta Listesi
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="index.php?controller=Patient&action=listdied">
-                                        <i class="fa-solid fa-users me-2"></i>Ölen Hasta Listesi
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="index.php?controller=Patient&action=listaraf">
-                                        <i class="fa-solid fa-users me-2"></i>Arafta Hasta Listesi
+                                        <i class="fa-solid fa-user-clock text-info me-2"></i>Bekleyen Hasta Listesi
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="index.php?controller=Patient&action=ilkkayit">
-                                        <i class="fa-solid fa-user-plus me-2"></i>Yeni Hasta Ekle
+                                        <i class="fa-solid fa-user-plus text-warning me-2"></i>Yeni Hasta İlk Kayıt
                                     </a>
                                 </li>
                             </ul>
@@ -86,10 +71,9 @@ class UIHelper {
                             </a>
                             <ul class="dropdown-menu shadow-lg border-0" aria-labelledby="adminDropdown">
                                 <li>
-                                    <a class="dropdown-item fw-bold <?= ($currentAction == 'admin') ? 'active text-white' : 'text-primary' ?>" 
-   href="index.php?controller=Dashboard&action=admin">
-    <i class="fas fa-chart-line me-2"></i>Admin Dashboard
-</a>
+                                    <a class="dropdown-item fw-bold <?= ($currentAction == 'admin') ? 'active text-white' : 'text-primary' ?>" href="index.php?controller=Dashboard&action=admin">
+                                    <i class="fas fa-chart-line me-2"></i>Admin Dashboard
+                                    </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Tıbbi Tanımlamalar</h6></li>
@@ -98,15 +82,29 @@ class UIHelper {
                                 <li><a class="dropdown-item" href="index.php?controller=Islem&action=index">İşlem Tanımları</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Sistem Ayarları</h6></li>
-<li>
-    <a class="dropdown-item <?= ($currentController == 'Ekip') ? 'active' : '' ?>" href="index.php?controller=Ekip&action=index">
-        Ekip Planlama
-    </a>
-</li>
-<li><a class="dropdown-item" href="index.php?controller=Guvence&action=index">Güvence Türleri</a></li>
-<li><a class="dropdown-item" href="index.php?controller=User&action=list">Kullanıcı Yönetimi</a></li>
+                                <li>
+                                <a class="dropdown-item <?= ($currentController == 'Ekip') ? 'active' : '' ?>" href="index.php?controller=Ekip&action=index">
+                                Ekip Planlama
+                                </a>
+                                </li>
                                 <li><a class="dropdown-item" href="index.php?controller=Guvence&action=index">Güvence Türleri</a></li>
                                 <li><a class="dropdown-item" href="index.php?controller=User&action=list">Kullanıcı Yönetimi</a></li>
+                                <li><a class="dropdown-item" href="index.php?controller=Guvence&action=index">Güvence Türleri</a></li>
+                                <li><a class="dropdown-item" href="index.php?controller=User&action=list">Kullanıcı Yönetimi</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Hasta İşlemleri</h6></li>
+                                <li><a class="dropdown-item" href="index.php?controller=Patient&action=listdeleted">
+                                <i class="fa-solid fa-users me-2"></i>Silinen Hasta Listesi
+                                </a>
+                                </li>
+                                <li><a class="dropdown-item" href="index.php?controller=Patient&action=listdied">
+                                <i class="fa-solid fa-users me-2"></i>Ölen Hasta Listesi
+                                </a>
+                                </li>
+                                <li><a class="dropdown-item" href="index.php?controller=Patient&action=listaraf">
+                                <i class="fa-solid fa-users me-2"></i>Arafta Hasta Listesi
+                                </a>
+                                </li>
                             </ul>
                         </li>
                         <?php endif; ?>

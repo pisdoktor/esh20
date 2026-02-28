@@ -1,0 +1,104 @@
+/* Ana Kutu: Yumuşak Karanlık Arka Plan */
+.datepicker.datepicker-dropdown {
+    padding: 12px !important;
+    background-color: #1e293b !important; /* Slate 800 */
+    border: 1px solid #334155 !important; /* Slate 700 */
+    border-radius: 16px !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important;
+    font-family: 'Inter', sans-serif !important;
+    color: #f1f5f9 !important;
+}
+
+/* Ok İşaretlerini Gizle */
+.datepicker-dropdown:before, .datepicker-dropdown:after {
+    display: none !important;
+}
+
+/* Başlık Alanı (Ay ve Yıl) */
+.datepicker table tr th {
+    color: #f1f5f9 !important;
+    font-weight: 600;
+    height: 45px;
+    border-radius: 10px !important;
+}
+
+.datepicker table tr th.datepicker-switch:hover,
+.datepicker table tr th.prev:hover,
+.datepicker table tr th.next:hover {
+    background-color: #334155 !important;
+    color: #38bdf8 !important; /* Soft Blue */
+}
+
+/* Haftanın Günleri (Pzt, Sal...) */
+.datepicker table tr th.dow {
+    color: #94a3b8 !important; /* Muted Slate */
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 12px;
+}
+
+/* Gün Hücreleri */
+.datepicker table tr td.day {
+    color: #cbd5e1 !important;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 10px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Günlerin Üzerine Gelince (Hover) */
+.datepicker table tr td.day:hover {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+}
+
+/* Bugün (Today) - Hafif bir vurgu */
+.datepicker table tr td.today {
+    background-color: rgba(56, 189, 248, 0.1) !important;
+    color: #38bdf8 !important;
+    font-weight: bold;
+    background-image: none !important;
+}
+
+/* Seçili Gün (Active) - Parlak ama yumuşak mavi */
+.datepicker table tr td.active, 
+.datepicker table tr td.active:hover,
+.datepicker table tr td.active.active {
+    background-color: #38bdf8 !important; /* Sky Blue */
+    background-image: none !important;
+    color: #0f172a !important; /* Koyu metin kontrası */
+    font-weight: 700;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.4) !important;
+}
+
+/* Diğer Ayın Günleri (Sönük) */
+.datepicker table tr td.old, 
+.datepicker table tr td.new {
+    color: #475569 !important; /* Daha karanlık slate */
+}
+
+/* Alt kısımdaki butonlar (Eğer varsa) */
+.datepicker table tfoot tr th:hover {
+    background-color: #334155 !important;
+}
+
+/* Input grubu içindeki borderları temizle ve hizala */
+#datepicker-range .form-control:focus {
+    box-shadow: none; /* Focus olduğunda mavi gölgeyi kaldır */
+    background-color: #f8fafc; /* Hafif bir gri tonu ver */
+}
+
+/* Okuma modunda (readonly) arka planın gri olmasını engelle */
+#datepicker-range .form-control[readonly] {
+    background-color: #fff;
+    cursor: pointer;
+}
+
+/* Soft-Dark CSS'ine ek olarak ikonların rengini belirginleştir */
+.datepicker table tr th.prev i, 
+.datepicker table tr th.next i {
+    font-size: 12px;
+    color: #38bdf8;
+}

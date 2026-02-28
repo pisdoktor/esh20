@@ -62,6 +62,9 @@ class PatientController {
     $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $offset   = ($page - 1) * $limit;
     $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    $reason   = isset($_GET['reason']) ? trim($_GET['reason']) : ''; // Yeni filtre
+    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : '';
+    $endDate   = isset($_GET['endDate']) ? $_GET['endDate'] : '';
     
     // 2. Sıralama Mantığı
     $orderby  = $_GET['orderby'] ?? 'h.isim';
@@ -71,18 +74,30 @@ class PatientController {
     // 3. Model İşlemleri
     $model = new Patient();
     // Toplam sayıyı alırken aramayı gönder (Pagination'ın bozulmaması için)
-    $totalPatients = $model->countAllPassive($search); 
+    $totalPatients = $model->countAllPassive($search, $reason, $startDate, $endDate); 
     
     // Listeyi alırken aramayı gönder
-    $patients = $model->getAllPassive($limit, $offset, $ordering, $search);
+    $patients = $model->getAllPassive($limit, $offset, $ordering, $search, $reason, $startDate, $endDate);
+    
+    $pasifListesi = [
+        '1' => 'İyileşme',
+        '2' => 'Vefat',
+        '3' => 'İkamet Değişikliği',
+        '4' => 'Tedaviyi Reddetme',
+        '5' => 'Tedaviye Yanıt Alamama',
+        '6' => 'Sonlandırmanın Talep Edilmesi',
+        '7' => 'Tedaviye Personel Gerekmemesi',
+        '8' => 'ESH Takibine Uygun Olmaması'
+    ];
     
     // 4. Link Yapılandırması
     // Sıralama ve limit bilgilerini pagelink'e eklemiyoruz çünkü 
     // PaginationHelper::render artık bunları $_GET üzerinden otomatik temizleyip ekliyor.
     $pagelink = "index.php?controller=Patient&action=listpassive";
-    if (isset($search)) {
-    $pagelink .= "&search=".$search;
-    }
+    if (isset($search)) { $pagelink .= "&search=".$search; }
+    if (isset($reason)) { $pagelink .= "&reason=".$reason; }
+    if (isset($startDate)) { $pagelink .= "&startDate=".$startDate; }
+    if (isset($endDate)) { $pagelink .= "&endDate=".$endDate;}
     
     $viewlink   = "index.php?controller=Patient&action=view&id=";
     $editlink   = "index.php?controller=Patient&action=edit&id=";
@@ -264,15 +279,15 @@ class PatientController {
         $model->bind($data);
         
         // Kayıt işlemi
-        $result = $model->store();
-
-        if ($result) {
-            header("Location: index.php?controller=Patient&action=listwaiting&msg=ok");
-        } else {
-            header("Location: index.php?controller=Patient&action=ilkkayit&msg=error");
+        if ($model->store()) {
+        $_SESSION['success'] = "Hasta ön kaydı başarıyla oluşturuldu.";
+        header("Location: index.php?controller=Patient&action=listwaiting");
+            } else {
+        $_SESSION['error'] = "Veritabanı hatası: Kayıt tamamlanamadı.";
+        header("Location: index.php?controller=Patient&action=ilkkayit");
         }
+        
         exit;
-    
     }
 
     public function edit() {
@@ -282,8 +297,50 @@ class PatientController {
         $districts = (new Address())->getDistricts();
         $hastaliklar = (new Hastalik())->getList(); 
         
-        $guvence = (new Guvence())->getList(); 
-
+        $guvence = (new Guvence())->getList();
+        
+          $barthelFields = [
+    'barbeslenme' => [
+        'label' => 'Beslenme', 'max' => 10, 
+        'desc' => '0: Bağımlı, 5: Yardımla (kesme vb.), 10: Bağımsız'
+    ],
+    'barbanyo' => [
+        'label' => 'Banyo', 'max' => 5, 
+        'desc' => '0: Bağımlı, 5: Bağımsız'
+    ],
+    'barbakim' => [
+        'label' => 'Kişisel Bakım', 'max' => 5, 
+        'desc' => '0: Yardımla, 5: Bağımsız (yüz yıkama, diş fırçalama vb.)'
+    ],
+    'bargiyinme' => [
+        'label' => 'Giyinme', 'max' => 10, 
+        'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız (düğme, bağcık dahil)'
+    ],
+    'barbarsak' => [
+        'label' => 'Bağırsak', 'max' => 10, 
+        'desc' => '0: İnkontinan, 5: Arada kaza olur, 10: Kontrollü'
+    ],
+    'barmesane' => [
+        'label' => 'Mesane', 'max' => 10, 
+        'desc' => '0: İnkontinan, 5: Arada kaza olur, 10: Kontrollü'
+    ],
+    'bartuvalet' => [
+        'label' => 'Tuvalet', 'max' => 10, 
+        'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'
+    ],
+    'bartransfer' => [
+        'label' => 'Transfer', 'max' => 15, 
+        'desc' => '0: Bağımlı, 5: İleri derece yardım, 10: Hafif yardım, 15: Bağımsız'
+    ],
+    'barmobilite' => [
+        'label' => 'Mobilite', 'max' => 15, 
+        'desc' => '0: İmmobil, 5: Tekerlekli sandalye, 10: Yardımla yürüme, 15: Bağımsız'
+    ],
+    'barmerdiven' => [
+        'label' => 'Merdiven', 'max' => 10, 
+        'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'
+    ]
+];
         $patient->diger_adres = $data = json_decode($patient->diger_adres ?? '[]', true);
         include '../views/partials/header.php';
         include '../views/site/hasta/ekle.php';
@@ -331,7 +388,7 @@ class PatientController {
     public function store() {
         $model = new Patient();
         $data = $_POST;
-
+        
         // Çoklu Adres İşleme
         if (isset($data['adres']) && is_array($data['adres'])) {
             $anaIndex = $data['ana_adres_index'] ?? 0;

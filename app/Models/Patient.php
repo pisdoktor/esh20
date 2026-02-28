@@ -126,12 +126,13 @@ class Patient extends BaseModel {
             LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
             LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
             {$where}
+            GROUP BY h.id
             ORDER BY {$ordering}";
     
     return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
 }
     //pasif hastaları getir
-    public function countAllPassive($search = '') {
+    public function countAllPassive($search = '', $reason = '', $startDate = '', $endDate = '') {
     $where = "WHERE h.pasif = 1";
     // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
     $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
@@ -143,11 +144,36 @@ class Patient extends BaseModel {
                     OR h.tckimlik LIKE '%{$search}%' 
                     OR a1.adi LIKE '%{$search}%')";
     }
+    
+    if (!empty($reason)) {
+        $where .= " AND h.pasifnedeni = " . $this->db->quote($reason);
+    }
+    
+    // Tarih dönüşüm fonksiyonunu yardımcı bir değişkenle yönetelim
+    if (!empty($startDate) || !empty($endDate)) {
+    
+    // Sadece başlangıç tarihi varsa
+    if (!empty($startDate) && empty($endDate)) {
+        $sDate = date('Y-m-d', strtotime(str_replace('.', '-', $startDate)));
+        $where .= " AND h.pasiftarihi >= " . $this->db->quote($sDate);
+    } 
+    // Sadece bitiş tarihi varsa
+    elseif (empty($startDate) && !empty($endDate)) {
+        $eDate = date('Y-m-d', strtotime(str_replace('.', '-', $endDate)));
+        $where .= " AND h.pasiftarihi <= " . $this->db->quote($eDate);
+    } 
+    // Her ikisi de varsa (Senin senaryon)
+    else {
+        $sDate = date('Y-m-d', strtotime(str_replace('.', '-', $startDate)));
+        $eDate = date('Y-m-d', strtotime(str_replace('.', '-', $endDate)));
+        $where .= " AND h.pasiftarihi BETWEEN " . $this->db->quote($sDate) . " AND " . $this->db->quote($eDate);
+    }
+}
 
     return $this->db->setQuery($sql . " " . $where)->loadResult();
 }
 
-    public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+    public function getAllPassive($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '', $reason = '', $startDate = '', $endDate = '') {
     $where = "WHERE h.pasif = 1";
     if (!empty($search)) {
         $where .= " AND (h.isim LIKE '%{$search}%' 
@@ -155,8 +181,33 @@ class Patient extends BaseModel {
                     OR h.tckimlik LIKE '%{$search}%' 
                     OR a1.adi LIKE '%{$search}%')";
     }
+    
+    if (!empty($reason)) {
+        $where .= " AND h.pasifnedeni = " . $this->db->quote($reason);
+    }
+    
+    // Tarih dönüşüm fonksiyonunu yardımcı bir değişkenle yönetelim
+    if (!empty($startDate) || !empty($endDate)) {
+    
+    // Sadece başlangıç tarihi varsa
+    if (!empty($startDate) && empty($endDate)) {
+        $sDate = date('Y-m-d', strtotime(str_replace('.', '-', $startDate)));
+        $where .= " AND h.pasiftarihi >= " . $this->db->quote($sDate);
+    } 
+    // Sadece bitiş tarihi varsa
+    elseif (empty($startDate) && !empty($endDate)) {
+        $eDate = date('Y-m-d', strtotime(str_replace('.', '-', $endDate)));
+        $where .= " AND h.pasiftarihi <= " . $this->db->quote($eDate);
+    } 
+    // Her ikisi de varsa (Senin senaryon)
+    else {
+        $sDate = date('Y-m-d', strtotime(str_replace('.', '-', $startDate)));
+        $eDate = date('Y-m-d', strtotime(str_replace('.', '-', $endDate)));
+        $where .= " AND h.pasiftarihi BETWEEN " . $this->db->quote($sDate) . " AND " . $this->db->quote($eDate);
+    }
+}
 
-    $sql = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
+    $sql = "SELECT DISTINCT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
             (SELECT izlemtarihi FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1 ORDER BY izlemtarihi DESC LIMIT 1) as sonizlemtarihi,
             (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1) as izlemsayisi,
             (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 0) as yizlemsayisi,
@@ -167,6 +218,7 @@ class Patient extends BaseModel {
             LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
             LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
             {$where}
+            GROUP BY h.id
             ORDER BY {$ordering}";
     
     return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();

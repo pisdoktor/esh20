@@ -1,0 +1,83 @@
+/* Chosen Konteynır Düzenleme */
+.chosen-container-single .chosen-single {
+    height: 38px !important; /* Bootstrap 5 form-control-sm / normal arası */
+    line-height: 34px !important;
+    background: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 50px !important; /* Pill görünümü için */
+    box-shadow: none !important;
+    padding: 0 15px !important;
+    color: #495057 !important;
+    font-family: 'Inter', sans-serif !important;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+/* Chosen Odaklanma (Focus) Hali */
+.chosen-container-active.chosen-with-drop .chosen-single,
+.chosen-container-active .chosen-single {
+    border-color: #86b7fe !important;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Sağdaki Ok İkonunu Modernleştirme */
+.chosen-container-single .chosen-single div b {
+    background: none !important; /* Eski ok resmini kaldır */
+}
+
+.chosen-container-single .chosen-single div::after {
+    content: '\f107'; /* FontAwesome Aşağı Ok */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 12px;
+    top: 0;
+    color: #0d6efd;
+}
+
+/* Açılır Liste (Dropdown) */
+.chosen-container .chosen-drop {
+    border-radius: 12px !important;
+    margin-top: 5px;
+    border: 1px solid #eee !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    overflow: hidden;
+}
+
+/* Arama Kutusu */
+.chosen-container .chosen-search input[type="text"] {
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    border: 1px solid #dee2e6 !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* Liste Elemanları (Options) */
+.chosen-container .chosen-results li {
+    padding: 10px 15px !important;
+    color: #4b5563 !important;
+    transition: all 0.2s;
+}
+
+/* Seçili veya Üzerine Gelinen Eleman */
+.chosen-container .chosen-results li.highlighted {
+    background-color: #0d6efd !important;
+    background-image: none !important;
+    color: #fff !important;
+}
+
+/* Çoklu Seçim (Multiple) Kullanıyorsan Tag Görünümü */
+.chosen-container-multi .chosen-choices {
+    border-radius: 12px !important;
+    border: 1px solid #dee2e6 !important;
+    padding: 5px 10px !important;
+    background-image: none !important;
+}
+
+.chosen-container-multi .chosen-choices li.search-choice {
+    background: #e7f1ff !important;
+    border: 1px solid #cfe2ff !important;
+    color: #0d6efd !important;
+    border-radius: 6px !important;
+    padding: 5px 20px 5px 10px !important;
+}

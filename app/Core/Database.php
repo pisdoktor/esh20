@@ -17,13 +17,14 @@ class Database {
     private $_errorNum = 0;
     private $_errorMsg = '';
     private $_log = [];
-    private $_debug = 0; 
+    private $_debug = 1; 
 
     private function __construct() {
         try {
             $dsn = "mysql:host=" . \DB_HOST . ";dbname=" . \DB_NAME . ";charset=utf8mb4";
             $this->pdo = new PDO($dsn, \DB_USER, \DB_PASS);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->pdo->exec("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
             $this->pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_turkish_ci");
         } catch (Exception $e) {
             $this->handleError($e, "Bağlantı Hatası");
@@ -184,11 +185,11 @@ class Database {
     }
 
     private function applyLimit($sql) {
-        if ($this->_limit > 0 || $this->_offset > 0) {
-            return $sql . " LIMIT " . $this->_offset . ", " . $this->_limit;
+        if ($this->_limit > 0) { // Limit mutlaka olmalı
+            return $sql . " LIMIT " . (int)$this->_offset . ", " . (int)$this->_limit;
         }
         return $sql;
-    }
+}
 
     public function stderr($showSQL = false) {
         return "DB Hatası ($this->_errorNum): <font color='red'>$this->_errorMsg</font>" . 
@@ -196,4 +197,18 @@ class Database {
     }
 
     public function getErrorMsg() { return $this->_errorMsg; }
+    
+    /**
+     * Debug modu aktifse tüm sorgu günlüğünü döndürür
+     */
+    public function getQueryLog() {
+        return $this->_log;
+    }
+
+    /**
+     * Debug modunun durumunu kontrol eder
+     */
+    public function isDebug() {
+        return $this->_debug == 1;
+    }
 }

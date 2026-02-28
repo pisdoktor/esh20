@@ -32,17 +32,21 @@ class AuthController {
                 // 3. Giriş başarılı, session başla
                 if ($userModel->activated) {
                 $_SESSION['user_id'] = $userModel->id;
+                $_SESSION['name'] = $userModel->name;
                 $_SESSION['username'] = $userModel->username;
                 $_SESSION['isadmin'] = $userModel->isadmin;
-                } else {
-                    $_SESSION['error'] = 'Hesabınız henüz aktive edilmemiş';
-                    header("Location: index.php?controller=Auth&action=login");
-                exit;
-                }
+                
+                $_SESSION['success'] = 'Giriş yapıldı';
                 
                 $userModel->updateVisitDate($userModel->id); // Giriş tarihini güncelle
                 header("Location: index.php?controller=Dashboard");
                 exit;
+                
+                } else {
+                    $_SESSION['error'] = 'Hesabınız henüz aktive edilmemiş';
+                    header("Location: index.php?controller=Auth&action=login");
+                    exit;
+                }
             }
         }
         

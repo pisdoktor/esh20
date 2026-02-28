@@ -2,8 +2,9 @@
     <div class="row align-items-center mb-4">
         <div class="col-md-4">
             <h4 class="fw-bold text-dark mb-0">
-                <i class="fa-solid fa-hospital-user text-primary me-2"></i><?= $pageTitle;?>
+                <i class="fa-solid fa-user-check text-success me-2"></i><?= $pageTitle;?>
             </h4>
+            <small class="text-muted">Aktif kayıtlar arasında arama yapın</small>
         </div>
         <div class="col-md-5">
             <form action="index.php" method="GET" class="d-flex shadow-sm rounded-pill overflow-hidden bg-white p-1">
