@@ -26,6 +26,20 @@ class Hastalik extends BaseModel {
         return $this->db->setQuery($query)->loadObjectList();
     }
     
+    public function getUserHastaliklar($hastaliklar) {
+    if (!empty($hastaliklar)) {
+        // ID listesini temizleyerek SQL güvenliğini sağla
+        $cleanHastalikIds = implode(',', array_map('intval', explode(',', $hastaliklar)));
+                
+        $queryHastalik = "SELECT CONCAT(h.icd, '-', h.hastalikadi) AS ad 
+                          FROM #__hastaliklar AS h
+                          WHERE h.id IN (" . $cleanHastalikIds . ") ORDER BY ad";
+        
+        return $this->db->setQuery($queryHastalik)->loadResultArray();
+    }
+        
+    }
+    
     public function getListWithCategory() {
     $query = "SELECT h.*, c.name as kategori_adi 
               FROM esh_hastaliklar h

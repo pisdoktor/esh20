@@ -13,7 +13,7 @@ class PatientController {
     
     
     // Aktif hastaları listeler pasif=0
-    public function listactive() {
+    public function listactive() { 
     // 1. Parametreleri Yakala
     $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
     $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -341,9 +341,32 @@ class PatientController {
         'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'
     ]
 ];
-        $patient->diger_adres = $data = json_decode($patient->diger_adres ?? '[]', true);
+        $barthelscore = (new Patient())->getBarthelScore();
+        
+        // En başa "Seçiniz" seçeneği ekleyelim (Obje olarak)
+        $options[] = \App\Helpers\FormHelper::makeOption('', 'Hastalık Seçiniz');
+    
+        foreach($hastaliklar as $hastalik) {
+        // makeOption zaten bir stdClass (obje) döndürür
+        $options[] = \App\Helpers\FormHelper::makeOption($hastalik->id, $hastalik->icd.'-'.$hastalik->hastalikadi);
+        }
+        
+        $lists = (new Address())->getAdresListeleri($patient);
+        
+        $patient->hastaliklar = explode(',', $patient->hastaliklar);
+        
+        $hast = \App\Helpers\FormHelper::selectList($options, 'hastaliklar[]', 'multiple="multiple"', 'value', 'text', $patient->hastaliklar);
+        
+        $boption[] = \App\Helpers\FormHelper::makeOption('', 'Bağımlılık Durumu');
+        $boption[] = \App\Helpers\FormHelper::makeOption(1, 'Bağımsız');
+        $boption[] = \App\Helpers\FormHelper::makeOption(2, 'Yarı Bağımlı');
+        $boption[] = \App\Helpers\FormHelper::makeOption(3, 'Tam Bağımlı');
+        
+        $bopt = \App\Helpers\FormHelper::selectList($boption, 'bagimlilik', '', 'value', 'text', $patient->bagimlilik);
+                
+        $patient->diger_adres = json_decode($patient->diger_adres ?? '[]', true);
         include '../views/partials/header.php';
-        include '../views/site/hasta/ekle.php';
+        include '../views/site/hasta/edit.php';
         include '../views/partials/footer.php';
     }
     
@@ -351,12 +374,15 @@ class PatientController {
         $id = $_GET['id'];
         $hasta = (new Patient())->getById($id);
         
-        $districts = (new Address())->getDistricts();
-        $hastaliklar = (new Hastalik())->getList(); 
+        $anaadres = (new Address())->getUserAddress($hasta->id);
         
-        $adres = (new Address())->getUserAddress($hasta->id);
+        $hasta->diger_adres = json_decode($hasta->diger_adres ?? '[]', true);
         
-        $guvence = (new Guvence())->getList(); 
+        $diger_adres = (new Address())->getUserOtherAddresses($hasta->diger_adres);
+        
+        $hastaliklar = (new Hastalik())->getUserHastaliklar($hasta->hastaliklar); 
+        
+        $guvence = (new Guvence())->getUserGuvence($hasta->guvence); 
         
         // Pasif Nedenleri ve İkonları
         $pasif_nedenleri_ikonlu = [
@@ -378,46 +404,78 @@ class PatientController {
             else if ($hasta->pasif == '-3') { $pasifnedeni = 'Bekleyen Hasta'; }
             else if ($hasta->pasif == '4') { $pasifnedeni = 'Arafta Hasta'; }
         }
-
-        $hasta->diger_adres = json_decode($patient->diger_adres ?? '[]', true);
+        
+    
+        
         include '../views/partials/header.php';
         include '../views/site/hasta/detail.php';
         include '../views/partials/footer.php';
     }
     
     public function store() {
-        $model = new Patient();
-        $data = $_POST;
+        
+        $patient = new Patient();
+        
+        $patient->load($_POST['id']);
+        
+        
+        $patient->dogumtarihi = date('Y.m.d', strtotime($_POST['dogumtarihi']));
+        $patient->kayittarihi = date('Y.m.d', strtotime($_POST['kayittarihi']));
+        
+        if (isset($data['pasiftarihi'])) {
+        $patient->pasiftarihi = date('Y.m.d', strtotime($_POST['pasiftarihi']));
+        }
+        
+        $patient->hastaliklar = implode(',',$_POST['hastaliklar']);
+        
+        // 1. Yeni bir not girilmiş mi kontrol et
+        if (!empty(trim($_POST['new_note']))) {
+        $existingNotes = json_decode($patient->notes, true) ?: [];
+        
+        // Yeni notu dizinin başına ekle
+        array_unshift($existingNotes, [
+            'date'    => date('d.m.Y H:i'),
+            'user'    => $_SESSION['name'] ?? 'Sistem',
+            'message' => trim($_POST['new_note'])
+        ]);
+        
+        // Güncel JSON'u ana veriye bas
+        $patient->notes = json_encode($existingNotes, JSON_UNESCAPED_UNICODE);
+        } else {
+        // Yeni not yoksa, mevcut notları olduğu gibi koru (textarea boş olsa bile silinmez)
+        $patient->notes = $patient->notes;
+        }
         
         // Çoklu Adres İşleme
-        if (isset($data['adres']) && is_array($data['adres'])) {
-            $anaIndex = $data['ana_adres_index'] ?? 0;
+        if (isset($_POST['adres']) && is_array($_POST['adres'])) {
+            $anaIndex = $_POST['ana_adres_index'] ?? 0;
             $yedekler = [];
 
-            foreach ($data['adres'] as $idx => $val) {
+            foreach ($_POST['adres'] as $idx => $val) {
                 if ($idx == $anaIndex) {
                     // Ana adresi modelin ana kolonlarına yaz
-                    $data['ilce'] = $val['ilce'] ?? null;
-                    $data['mahalle'] = $val['mahalle'] ?? null;
-                    $data['sokak'] = $val['sokak'] ?? null;
-                    $data['kapino'] = $val['kapino'] ?? null;
-                    $data['adres_aciklama'] = $val['adres_aciklama'] ?? null;
+                    $patient->ilce = $val['ilce'] ?? null;
+                    $patient->mahalle = $val['mahalle'] ?? null;
+                    $patient->sokak = $val['sokak'] ?? null;
+                    $patient->kapino = $val['kapino'] ?? null;
+                    $patient->adres_aciklama = $val['adres_aciklama'] ?? null;
                 } else {
                     $yedekler[] = $val;
                 }
             }
-            $data['diger_adres'] = json_encode($yedekler, JSON_UNESCAPED_UNICODE);
+            $patient->diger_adres = json_encode($yedekler, JSON_UNESCAPED_UNICODE);
         }
 
-        $model->bind($data);
-        
+       
         // Kayıt işlemi
-        $result = $model->store();
+        $result = $patient->store();
 
         if ($result) {
-            header("Location: index.php?controller=Patient&action=list&msg=ok");
+            $_SESSION['success'] = "Hasta bilgileri kaydedildi.";
+            header("Location: index.php?controller=Patient&action=view&id=".$patient->id);
         } else {
-            header("Location: index.php?controller=Patient&action=create&msg=error");
+            $_SESSION['error'] = "Veritabanı hatası: Hasta bilgileri kaydedilemedi";
+            header("Location: index.php?controller=Patient&action=edit&id=".$patient->id);
         }
         exit;
     }
@@ -482,5 +540,79 @@ class PatientController {
     ]);
     
     return $oldu;
+}
+
+    public function prepareNotes($existingJson, $newNote) {
+    // 1. Mevcut notları çöz (Eğer boşsa boş dizi oluştur)
+    $notesArray = json_decode($existingJson, true) ?: [];
+
+    $newNote = trim($newNote);
+
+    // 2. Eğer yeni bir not yazılmışsa ekle
+    if (!empty($newNote)) {
+        $notesArray[] = [
+            'date'    => date('d.m.Y H:i'), // Otomatik tarih ve saat
+            'user'    => $_SESSION['name'] ?? 'Sistem', // Opsiyonel: Notu yazan kişi
+            'message' => htmlspecialchars($newNote)
+        ];
+    }
+
+    // 3. Tekrar JSON'a çevir (Türkçe karakterleri koruyarak)
+    return json_encode($notesArray, JSON_UNESCAPED_UNICODE);
+    }
+    
+    public function updateNotes() {
+        $id = (int)$_POST['id'];
+        $new_note = $_POST['new_notes'];
+        
+        $patient = new Patient();
+        $patient->load($id);
+        
+        $mevcutNotlar = $patient->notes;
+        
+        $new = $this->prepareNotes($mevcutNotlar, $_POST['new_note']);
+    
+        $patient->notes = $new;
+        
+        if ($patient->store()) {
+        $_SESSION['success'] = "Hasta notu oluşturuldu.";
+        header("Location: index.php?controller=Patient&action=view&id=".$patient->id);
+            } else {
+        $_SESSION['error'] = "Veritabanı hatası: Hasta notu kaydedilemedi.";
+        header("Location: index.php?controller=Patient&action=view&id=".$patient->id);
+        }
+    }
+    
+    public function deleteNote() {
+    $id = (int)$_POST['id'];
+    $index = (int)$_POST['index'];
+
+    // 1. Mevcut notları çek
+    $patient = new Patient();
+    $patient->load($id);
+    
+    $currentJson = $patient->notes;
+    $notesArray = json_decode($currentJson, true);
+
+    if (isset($notesArray[$index])) {
+        // 2. Belirtilen index'teki notu sil
+        unset($notesArray[$index]);
+
+        // 3. Diziyi yeniden indexle (0,1,2 diye sıralı kalsın)
+        $notesArray = array_values($notesArray);
+
+        // 4. Yeni halini kaydet
+        $newJson = json_encode($notesArray, JSON_UNESCAPED_UNICODE);
+        $patient->notes = $newJson;
+        
+        if ($patient->store()) {
+            echo json_encode(['success' => true, 'message' => 'Not kaydedildi']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Veritabanı hatası.']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Not bulunamadı.']);
+    }
+    exit;
 }
 }

@@ -21,4 +21,9 @@ class Guvence extends BaseModel {
         $sql = "SELECT * FROM esh_guvence ORDER BY guvenceadi ASC";
         return $this->db->setQuery($sql)->loadObjectList();
     }
+    
+    public function getUserGuvence($id) {
+        $sql = "SELECT guvenceadi FROM esh_guvence WHERE id=".$id;
+        return $this->db->setQuery($sql)->loadResult();
+    }
 }

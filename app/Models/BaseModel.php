@@ -17,18 +17,30 @@ class BaseModel {
      * Dışarıdan gelen veriyi (POST verisi veya nesne) model özelliklerine bağlar.
      */
     public function bind($data) {
-        $data = (array) $data;
-        foreach ($data as $key => $value) {
-            if (property_exists($this, $key)) {
-                // Primary key boş gelirse null set et (Insert işlemi için önemli)
-                if (($key === $this->_tbl_key || $key === 'id') && $value === '') {
-                    $this->$key = null;
-                } else {
-                    $this->$key = $value;
-                }
+    $data = (array) $data;
+    
+    foreach ($data as $key => $value) {
+        if (property_exists($this, $key)) {
+            
+            // 1. Değeri temizle (Başındaki/sonundaki boşlukları al)
+            $cleanValue = is_string($value) ? trim($value) : $value;
+
+            // 2. Boşluk Kontrolü: Eğer değer boş string, "NULL" kelimesi 
+            // veya 1970 tarihi ise nesne özelliğini gerçek NULL yap.
+            if ($cleanValue === '' || $cleanValue === 'NULL' || $cleanValue === '1970.01.01') {
+                $this->$key = null;
+            } 
+            // 3. ID alanı özel kontrolü
+            elseif (($key === $this->_tbl_key || $key === 'id') && empty($cleanValue)) {
+                $this->$key = null;
+            } 
+            else {
+                // Değer doluysa ata
+                $this->$key = $cleanValue;
             }
         }
     }
+}
 
     /**
      * Veriyi veritabanına kaydeder. 

@@ -16,7 +16,7 @@ public static function patientFeatures($patient) {
     }
     
     // Not Mevcut (N)
-    if (!empty($patient->notes)) {
+    if (!empty($patient->notes) && strlen($patient->notes)>2) {
         $badges .= '<span class="badge bg-info x-small me-1" title="Not Mevcut" data-bs-toggle="tooltip">N</span>';
     }
     

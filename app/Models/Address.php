@@ -129,4 +129,91 @@ class Address extends BaseModel {
                 WHERE h.id=$userid";
         return $this->db->setQuery($sql)->loadObject();
     }
+    
+    public function getAdresListeleri($patient) {
+  
+    $lists = array();
+
+    // 1. İLÇE LİSTESİ
+    $lists['ilce']    = $this->generateAdresSelect('ilce', null, $patient->ilce, 'İlçe', 'ilce', 1);
+
+    // 2. MAHALLE LİSTESİ (İlçeye bağlı)
+    $lists['mahalle'] = $this->generateAdresSelect('mahalle', $patient->ilce, $patient->mahalle, 'Mahalle', 'mahalle', 1);
+
+    // 3. SOKAK LİSTESİ (Mahalleye bağlı)
+    $lists['sokak']   = $this->generateAdresSelect('sokak', $patient->mahalle, $patient->sokak, 'Sokak', 'sokak', 1);
+
+    // 4. KAPINO LİSTESİ (Sokağa bağlı)
+    $lists['kapino']  = $this->generateAdresSelect('kapino', $patient->sokak, $patient->kapino, 'Kapı No', 'kapino');
+    
+    $lists['adres_aciklama'] = $this->generateAdresAciklama('adres_aciklama', $patient->adres_aciklama, 'adres_aciklama');
+
+    return $lists;
+}
+
+    public function getUserOtherAddresses($adresler) {
+    // Adres listesinin dizi ve dolu olup olmadığını kontrol ediyoruz
+    if (is_array($adresler) && !empty($adresler)) {
+        
+        $adresbilgi = array();
+        
+        foreach ($adresler as $v) {
+            $sql = "SELECT 
+                        i.adi AS ilce, 
+                        m.adi AS mahalle, 
+                        s.adi AS sokak, 
+                        k.adi AS kapino
+                    FROM esh_adrestablosu AS i
+                    LEFT JOIN esh_adrestablosu AS m ON m.id = '{$v['mahalle']}'
+                    LEFT JOIN esh_adrestablosu AS s ON s.id = '{$v['sokak']}'
+                    LEFT JOIN esh_adrestablosu AS k ON k.id = '{$v['kapino']}'
+                    WHERE i.id = '{$v['ilce']}' 
+                    LIMIT 1"; // Sadece ilgili satırı almak için limit ekledik
+            
+            $result['adres'] = $this->db->setQuery($sql)->loadObject();
+            $result['adres_aciklama'] = $v['adres_aciklama'];
+            if ($result) {
+                $adresbilgi[] = $result;
+            }
+        }
+        
+        return $adresbilgi;
+    }
+    
+    return array(); // Eğer adres yoksa boş dizi döndürmek daha güvenlidir
+}
+    /**
+     * PHP4 için yardımcı SQL ve HTML oluşturucu fonksiyon
+     */
+    public function generateAdresSelect($tip, $ust_id, $current_val, $label, $element_id, $required=0) {    
+        // SQL sorgusunu PHP4 standartlarında birleştiriyoruz 
+        $query = "SELECT id, adi FROM esh_adrestablosu WHERE tip='" . $tip . "'";
+        
+        // Eğer bir üst kategori seçiliyse (veya ilçe gibi kök dizinse) sorguya ekle
+        if ($ust_id !== null && $ust_id > 0) {
+            $query .= " AND ust_id='" . $ust_id . "'";
+        } elseif ($tip != 'ilce' && ($ust_id === null || $ust_id == 0)) {
+            // Eğer ilçe değilse ve üst id yoksa boş liste döndürmek için imkansız bir şart
+            $query .= " AND 1=2";
+        }
+
+        $query .= " ORDER BY adi ASC";
+
+        $rows = $this->db->setQuery($query)->loadObjectList(); 
+        
+        $options[] = \App\Helpers\FormHelper::makeOption('', $label.' Seçin');
+        foreach($rows as $row) {
+         $options[] = \App\Helpers\FormHelper::makeOption($row->id, $row->adi);
+        }
+                                                               
+        $requiredtext = $required ? 'required="required"': '';
+        
+        return \App\Helpers\FormHelper::selectList($options, $tip, $requiredtext, 'value', 'text', $current_val);
+    }
+
+    function generateAdresAciklama($name, $value, $element_id) {
+        // HTML stringini PHP4 uyumlu birleştiriyoruz
+        $html = '<textarea name="' . $name . '" id="' . $element_id . '" class="form-control" rows="2" placeholder="Adres detayı (Bina adı, Kat, Daire vb.)">' . $value . '</textarea>';
+        return $html;
+    }
 }

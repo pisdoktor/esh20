@@ -17,7 +17,7 @@ class Database {
     private $_errorNum = 0;
     private $_errorMsg = '';
     private $_log = [];
-    private $_debug = 1; 
+    private $_debug = 0; 
 
     private function __construct() {
         try {

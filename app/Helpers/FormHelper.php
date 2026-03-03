@@ -1,147 +1,207 @@
 <?php
 namespace App\Helpers;
 
+use stdClass;
+
 /**
  * FormHelper - Form bileşenlerini standardize eden yardımcı sınıf.
- * Bootstrap 5 standartlarına uygun çıktı üretir.
+ * Bootstrap 5, Chosen ve Datepicker standartlarına uygun çıktı üretir.
  */
 class FormHelper {
 
     /**
-     * Veritabanı nesne listesini (Object List) key => value dizisine çevirir.
-     * Joomla'nın mosHTML::makeOption mantığına benzer.
-     * * @param array $list Veritabanı sonuç dizisi
-     * @param string $valueField 'value' kısmına gelecek özellik (Örn: 'id')
-     * @param string $textField 'text' kısmına gelecek özellik (Örn: 'isim')
-     * @param bool $addPleaseSelect Başa 'Seçiniz' ekler mi?
+     * Nitelik dizisini HTML formatına çevirir.
      */
-    public static function makeOptions($list, $valueField, $textField, $addPleaseSelect = false) {
-        $options = [];
-        
-        if ($addPleaseSelect) {
-            $options[''] = 'Seçiniz...';
+    private static function parseAttributes(array $attr): string {
+        $str = '';
+        foreach ($attr as $key => $val) {
+            if ($key === 'rows') continue;
+            $str .= " " . htmlspecialchars($key) . "='" . htmlspecialchars((string)$val) . "'";
         }
-
-        if (is_array($list)) {
-            foreach ($list as $item) {
-                // Nesne ise ->, dizi ise [] olarak eriş
-                $val = is_object($item) ? $item->$valueField : $item[$valueField];
-                $text = is_object($item) ? $item->$textField : $item[$textField];
-                $options[$val] = $text;
-            }
-        }
-        return $options;
+        return $str;
     }
 
     /**
-     * Standart Input Alanı (Text, Number, Email, Date vb.)
+     * Veritabanı nesne listesini (Object List) key => value dizisine çevirir.
+     */
+    public static function makeOption(string $value, string $text = '', string $value_name = 'value', string $text_name = 'text'): stdClass {
+        $obj = new stdClass();
+        $obj->$value_name = $value;
+        $obj->$text_name = trim($text) !== '' ? $text : $value;
+        return $obj;
+    }
+
+    /**
+     * Standart Input Alanı (Floating Label desteği eklendi)
      */
     public static function input($name, $label, $value = '', $type = 'text', $attr = []) {
         $attributes = self::parseAttributes($attr);
+        $class = 'form-control ' . ($attr['class'] ?? '');
         return "
-        <div class='form-group mb-3'>
-            <label class='form-label small fw-bold text-uppercase text-muted' for='{$name}'>{$label}</label>
-            <input type='{$type}' name='{$name}' id='{$name}' value='{$value}' {$attributes}>
+        <div class='form-floating mb-3'>
+            <input type='{$type}' name='{$name}' id='{$name}' class='{$class}' value='{$value}' placeholder='{$label}' {$attributes}>
+            <label for='{$name}' class='small fw-bold text-muted'>{$label}</label>
         </div>";
     }
 
     /**
-     * Select (Açılır Menü) Alanı
-     * $options parametresi direkt dizi gelebilir veya $mapping ile ham liste gönderilebilir.
+     * Select (Açılır Menü) Alanı - Chosen Uyumluluğu eklendi
      */
-    public static function select($name, $label, $options, $selected = '', $attr = []) {
-    $attributes = self::parseAttributes($attr);
-    
-    // HTML ID'si için name içindeki [] işaretlerini temizleyelim (hastaliklar[] -> hastaliklar)
-    $cleanId = str_replace(['[]', '[', ']'], '', $name);
-    
-    $html = "<div class='form-group mb-3'>";
-    if ($label) $html .= "<label class='form-label small fw-bold text-uppercase text-muted' for='{$cleanId}'>{$label}</label>";
-    
-    $html .= "<select name='{$name}' id='{$cleanId}' {$attributes}>";
-    
-    // Eğer multiple değilse "Seçiniz" opsiyonunu ekle
-    if (!str_contains($attributes, 'multiple')) {
-        $html .= "<option value=''>Seçiniz...</option>";
-    }
-
-    foreach ($options as $val => $text) {
-        // Nesne kontrolü (Mevcut mantığın)
-        if (is_object($text) || is_array($text)) {
-            $displayValue = isset($text->adi) ? $text->adi : (isset($text->id) ? $text->id : 'Tanımsız Nesne');
+    public static function selectList(array $arr, string $tag_name, string $tag_attribs, string $key='value', string $text='text', mixed $selected = null): string {
+        // Chosen sınıfını otomatik ekle
+        if (strpos($tag_attribs, 'class=') === false) {
+            $tag_attribs .= ' class="form-select chosen-select"';
         } else {
-            $displayValue = $text;
+            $tag_attribs = str_replace('class="', 'class="chosen-select ', $tag_attribs);
         }
 
-        // --- ÇOKLU SEÇİM (ARRAY) KONTROLÜ BURADA ---
-        $is_selected = false;
-        if (is_array($selected)) {
-            // Eğer $selected bir diziyse, mevcut $val bu dizinin içinde mi bak
-            $is_selected = in_array((string)$val, array_map('strval', $selected));
-        } else {
-            // Eğer tekil değerse eski mantıkla devam et
-            $is_selected = ((string)$val === (string)$selected && $selected !== '');
+        $html = "\n<select name=\"$tag_name\" id=\"$tag_name\" $tag_attribs>";
+            
+        foreach ($arr as $obj) {
+            $k = (string)$obj->$key;
+            $t = (string)$obj->$text;
+            $extra = '';
+            
+            if (is_array($selected)) {
+                if (in_array($k, array_map('strval', $selected), true)) {
+                    $extra = ' selected="selected"';
+                }
+            } else {
+                if ($selected !== null && $selected !== '' && (string)$k === (string)$selected) {
+                    $extra = ' selected="selected"';
+                } elseif (($selected === '' || $selected === null) && $k === '') {
+                    $extra = ' selected="selected"';
+                }
+            }
+
+            $html .= "\n\t<option value=\"" . htmlspecialchars($k) . "\"$extra>" . htmlspecialchars($t) . "</option>";
         }
+        $html .= "\n</select>\n";
 
-        $sel = $is_selected ? 'selected' : '';
-        $html .= "<option value='{$val}' {$sel}>{$displayValue}</option>";
+        return $html;
     }
-
-    $html .= "</select></div>";
-    return $html;
-}
 
     /**
-     * Radio Listesi (Tekli Seçim Grubu)
+     * Ay isimlerinden oluşan select listesi.
      */
-    public static function radioList($name, $label, $options, $selected = '', $inline = true, $mapping = null) {
-        if ($mapping) {
-            $options = self::makeOptions($options, $mapping['value'], $mapping['text']);
+    public static function monthSelectList(string $tag_name, string $tag_attribs, mixed $selected, bool $required): string {
+        $arr = [];
+        $arr[] = self::makeOption($required ? '' : '0', 'Bir Seçim Yapın');
+
+        $months = [
+            '01' => 'Ocak', '02' => 'Şubat', '03' => 'Mart', '04' => 'Nisan',
+            '05' => 'Mayıs', '06' => 'Haziran', '07' => 'Temmuz', '08' => 'Ağustos',
+            '09' => 'Eylül', '10' => 'Ekim', '11' => 'Kasım', '12' => 'Aralık'
+        ];
+
+        foreach ($months as $val => $name) {
+            $arr[] = self::makeOption($val, $name);
         }
 
-        $class = $inline ? 'form-check-inline' : '';
-        $html = "<div class='form-group mb-3'>";
-        if ($label) $html .= "<label class='form-label d-block small fw-bold text-uppercase text-muted'>{$label}</label>";
-        
-        foreach ($options as $val => $text) {
-            $id = $name . '_' . $val;
-            $is_checked = (string)$val === (string)$selected ? 'checked' : '';
-            $html .= "
-            <div class='form-check {$class}'>
-                <input class='form-check-input' type='radio' name='{$name}' id='{$id}' value='{$val}' {$is_checked}>
-                <label class='form-check-label' for='{$id}'>{$text}</label>
-            </div>";
+        return self::selectList($arr, $tag_name, $tag_attribs, 'value', 'text', $selected);
+    }
+
+    /**
+     * Evet/Hayır select listesi.
+     */
+    public static function yesnoSelectList(string $tag_name, string $tag_attribs, mixed $selected, string $yes = 'Evet', string $no = 'Hayır'): string {
+        $arr = [
+            self::makeOption('0', $no),
+            self::makeOption('1', $yes),
+        ];
+        return self::selectList($arr, $tag_name, $tag_attribs, 'value', 'text', $selected);
+    }
+
+    /**
+     * Radio buton listesi.
+     */
+    public static function radioList(array $arr, string $tag_name, string $tag_attribs, string $key = 'value', string $text = 'text', mixed $selected = null): string {
+        $html = "";
+        foreach ($arr as $obj) {
+            $k = (string)$obj->$key;
+            $t = (string)$obj->$text;
+            $id = $obj->id ?? $tag_name . $k;
+
+            $extra = '';
+            if (is_array($selected)) {
+                $extra = in_array($k, $selected) ? ' checked="checked"' : '';
+            } else {
+                $extra = ((string)$k === (string)$selected ? ' checked="checked"' : '');
+            }
+
+            $html .= "\n\t<div class='form-check form-check-inline'>";
+            $html .= "\n\t<input type=\"radio\" class=\"form-check-input\" name=\"$tag_name\" id=\"" . htmlspecialchars((string)$id) . "\" value=\"" . htmlspecialchars($k) . "\"$extra $tag_attribs />";
+            $html .= "\n\t<label class=\"form-check-label small\" for=\"" . htmlspecialchars((string)$id) . "\">" . htmlspecialchars($t) . "</label>";
+            $html .= "\n\t</div>";
         }
-        $html .= "</div>";
         return $html;
     }
 
     /**
      * Checkbox Listesi (Çoklu Seçim Grubu)
      */
-    public static function checkboxList($name, $label, $options, $selectedValues = [], $inline = true, $mapping = null) {
-        if ($mapping) {
-            $options = self::makeOptions($options, $mapping['value'], $mapping['text']);
+    public static function checkboxList(array $arr, string $tag_name, string $tag_attribs, string $key = 'value', string $text = 'text', mixed $selected = null): string {
+        $html = "";
+        foreach ($arr as $obj) {
+            $k = (string)$obj->$key;
+            $t = (string)$obj->$text;
+            $id = $obj->id ?? $tag_name . $k;
+
+            $extra = '';
+            if (is_array($selected)) {
+                if (in_array($k, array_map('strval', $selected), true)) {
+                    $extra = ' checked="checked"';
+                }
+            } else {
+                $extra = ((string)$k === (string)$selected ? ' checked="checked"' : '');
+            }
+
+            $html .= "\n\t<div class='form-check form-check-inline'>";
+            $html .= "\n\t<input type=\"checkbox\" class=\"form-check-input\" name=\"{$tag_name}[]\" id=\"" . htmlspecialchars((string)$id) . "\" value=\"" . htmlspecialchars($k) . "\"$extra $tag_attribs />";
+            $html .= "\n\t<label class=\"form-check-label small\" for=\"" . htmlspecialchars((string)$id) . "\">" . htmlspecialchars($t) . "</label>";
+            $html .= "\n\t</div>";
+        }
+        return $html;
+    }
+
+    /**
+     * Gruplandırılmış (OptGroup) select listesi.
+     */
+    public static function selectOptGroup(array $arr, string $tag_name, string $tag_attribs, string $key = 'value', string $text = 'text', mixed $selected = null): string {
+        $html = "\n<select class=\"form-control chosen-select\" name=\"$tag_name\" $tag_attribs>";
+        $html .= "\n<option value=\"\">Bir Seçim Yapın</option>";
+
+        $groups = [];
+        foreach ($arr as $option) {
+            $groups[$option->groupname][$option->id] = $option->name;
         }
 
-        $class = $inline ? 'form-check-inline' : '';
-        $arrayName = (substr($name, -2) !== '[]') ? $name . '[]' : $name;
-        
-        $html = "<div class='form-group mb-3'>";
-        if ($label) $html .= "<label class='form-label d-block small fw-bold text-uppercase text-muted'>{$label}</label>";
-        
-        foreach ($options as $val => $text) {
-            $id = str_replace(['[', ']'], '', $name) . '_' . $val;
-            // Seçili değerleri stringe çevirerek karşılaştırıyoruz (0/1 karmaşası olmaması için)
-            $is_checked = in_array((string)$val, array_map('strval', (array)$selectedValues)) ? 'checked' : '';
-            $html .= "
-            <div class='form-check {$class}'>
-                <input class='form-check-input' type='checkbox' name='{$arrayName}' id='{$id}' value='{$val}' {$is_checked}>
-                <label class='form-check-label' for='{$id}'>{$text}</label>
-            </div>";
+        foreach ($groups as $label => $options) {
+            $html .= "\n<optgroup label=\"" . htmlspecialchars((string)$label) . "\">";
+            foreach ($options as $id => $name) {
+                $extra = (string)$id === (string)$selected ? ' selected="selected"' : '';
+                $html .= "\n\t<option value=\"" . htmlspecialchars((string)$id) . "\"$extra>" . htmlspecialchars((string)$name) . "</option>";
+            }
+            $html .= "\n</optgroup>\n";
         }
-        $html .= "</div>";
+
+        $html .= "\n</select>\n";
         return $html;
+    }
+
+    /**
+     * Tamsayı aralığından select listesi oluşturur.
+     */
+    public static function integerSelectList(int $start, int $end, int $inc, string $tag_name, string $tag_attribs, mixed $selected, bool $required, string $format = ""): string {
+        $arr = [];
+        $arr[] = self::makeOption($required ? '' : '0', 'Bir Seçim Yapın');
+
+        for ($i = $start; $i <= $end; $i += $inc) {
+            $fi = $format ? sprintf($format, $i) : (string)$i;
+            $arr[] = self::makeOption($fi, $fi);
+        }
+
+        return self::selectList($arr, $tag_name, $tag_attribs, 'value', 'text', $selected);
     }
 
     /**
@@ -152,7 +212,7 @@ class FormHelper {
         $rows = $attr['rows'] ?? 3;
         return "
         <div class='form-group mb-3'>
-            <label class='form-label small fw-bold text-uppercase text-muted' for='{$name}'>{$label}</label>
+            <label class='form-label small fw-bold text-muted' for='{$name}'>{$label}</label>
             <textarea name='{$name}' id='{$name}' class='form-control' rows='{$rows}' {$attributes}>{$value}</textarea>
         </div>";
     }
@@ -163,9 +223,9 @@ class FormHelper {
     public static function switch($name, $label, $checked = false, $value = '1') {
         $is_checked = $checked ? 'checked' : '';
         return "
-        <div class='form-check form-switch mb-3'>
+        <div class='form-check form-switch mb-3 custom-switch'>
             <input class='form-check-input' type='checkbox' role='switch' name='{$name}' id='{$name}' value='{$value}' {$is_checked}>
-            <label class='form-check-label small fw-bold text-uppercase text-muted' for='{$name}'>{$label}</label>
+            <label class='form-check-label small fw-bold text-muted' for='{$name}'>{$label}</label>
         </div>";
     }
 
@@ -176,9 +236,9 @@ class FormHelper {
         $attributes = self::parseAttributes($attr);
         return "
         <div class='form-group mb-3'>
-            <label class='form-label small fw-bold text-uppercase text-muted' for='{$name}'>{$label}</label>
-            <div class='input-group'>
-                <span class='input-group-text'><i class='fa-solid {$icon}'></i></span>
+            <label class='form-label small fw-bold text-muted' for='{$name}'>{$label}</label>
+            <div class='input-group shadow-sm'>
+                <span class='input-group-text bg-light'><i class='fa-solid {$icon} text-primary'></i></span>
                 <input type='{$type}' name='{$name}' id='{$name}' class='form-control' value='{$value}' {$attributes}>
             </div>
         </div>";
@@ -192,71 +252,32 @@ class FormHelper {
     }
 
     /**
-     * Nitelik dizisini HTML formatına çevirir
+     * İkon destekli ve Datepicker uyumlu tarih giriş alanı
      */
-    private static function parseAttributes($attr) {
-        $str = '';
-        foreach ($attr as $key => $val) {
-            if ($key === 'rows') continue; // rows textarea metodunda işleniyor
-            $str .= " {$key}='{$val}'";
-        }
-        return $str;
+    public static function date($name, $label, $value = null, $attributes = []) {
+        $displayValue = ($value && $value != '0000-00-00') ? date('d.m.Y', strtotime($value)) : '';
+        
+        $attrStr = self::parseAttributes($attributes);
+        return "
+        <div class='mb-3'>
+            <label for='{$name}' class='form-label small fw-bold text-muted'>{$label}</label>
+            <div class='input-group shadow-sm'>
+                <span class='input-group-text bg-light text-primary border-end-0'>
+                    <i class='fa-solid fa-calendar-days'></i>
+                </span>
+                <input type='text' name='{$name}' id='{$name}' class='form-control datepicker' 
+                       value='{$displayValue}' placeholder='GG.AA.YYYY' autocomplete='off' maxlength='10' {$attrStr}>
+            </div>
+        </div>";
     }
-    
+
     /**
- * Tarih giriş alanı oluşturur (Datepicker destekli)
- * * @param string $name İnput adı
- * @param string $label Etiket metni
- * @param string|null $value Mevcut değer
- * @param array $attributes Ekstra HTML nitelikleri
- * @return string
- */
-/**
- * İkon destekli ve Datepicker uyumlu tarih giriş alanı
- */
-public static function date($name, $label, $value = null, $attributes = []) {
-    // 1. Sınıfları Hazırla
-    $defaultClasses = 'form-control datepicker';
-    if (isset($attributes['class'])) {
-        $attributes['class'] .= ' ' . $defaultClasses;
-    } else {
-        $attributes['class'] = $defaultClasses;
+     * UUID Oluşturucu
+     */
+    public static function generateUUID() {
+        $data = random_bytes(16);
+        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
-
-    // 2. Varsayılan Ayarlar
-    $attributes['autocomplete'] = 'off';
-    $attributes['placeholder']  = $attributes['placeholder'] ?? 'GG.AA.YYYY';
-
-    // 3. HTML Çıktısı (Bootstrap Input Group Yapısı)
-    $html = '<div class="mb-3">';
-    $html .= '  <label for="' . $name . '" form-label small fw-bold text-uppercase text-muted>';
-    $html .=    $label; // Başlığa küçük bir ikon
-    $html .= '  </label>';
-    $html .= '  <div class="input-group">'; // Hafif bir gölge ekledik
-    $html .= '      <span class="input-group-text bg-light text-primary border-end-0">';
-    $html .= '          <i class="fa-solid fa-calendar-alt"></i>'; // Giriş yanındaki ana ikon
-    $html .= '      </span>';
-    $html .= '      <input type="text" name="' . $name . '" id="' . $name . '" value="' . htmlspecialchars($value ?? '') . '"';
-    
-    // Diğer tüm öznitelikleri (attributes) döngüyle ekle
-    foreach ($attributes as $key => $val) {
-        $html .= ' ' . $key . '="' . htmlspecialchars($val) . '"';
-    }
-    
-    $html .= '      >';
-    $html .= '  </div>';
-    $html .= '</div>';
-
-    return $html;
-}
-
-/**
-* @desc esh_adrestablosuna yeni veri girişi yapaken id değerini oluşturmak için
-*/
-function generateUUID() {
-    $data = random_bytes(16);
-    $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // versiyon 4 ayarı
-    $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // varyant ayarı
-    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
-}
 }

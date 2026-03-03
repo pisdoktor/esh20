@@ -335,6 +335,7 @@ class Patient extends BaseModel {
         return ['score' => $total, 'status' => $status];
     }
     
+    //Hastayı pasife alma
     public function setPassive($reason, $date = null) {
         $this->pasif = 1;
         $this->pasifnedeni = (int)$reason;

@@ -65,49 +65,57 @@ class UIHelper {
                         </li>
 
                         <?php if (isset($_SESSION['isadmin']) && $_SESSION['isadmin'] == true): ?>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle bg-warning text-dark rounded px-3 ms-lg-2" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-shield me-1"></i> Yönetim
-                            </a>
-                            <ul class="dropdown-menu shadow-lg border-0" aria-labelledby="adminDropdown">
-                                <li>
-                                    <a class="dropdown-item fw-bold <?= ($currentAction == 'admin') ? 'active text-white' : 'text-primary' ?>" href="index.php?controller=Dashboard&action=admin">
-                                    <i class="fas fa-chart-line me-2"></i>Admin Dashboard
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Tıbbi Tanımlamalar</h6></li>
-                                <li><a class="dropdown-item" href="index.php?controller=Brans&action=index">Branş Yönetimi</a></li>
-                                <li><a class="dropdown-item" href="index.php?controller=Hastalik&action=index">Hastalık Kütüphanesi</a></li>
-                                <li><a class="dropdown-item" href="index.php?controller=Islem&action=index">İşlem Tanımları</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Sistem Ayarları</h6></li>
-                                <li>
-                                <a class="dropdown-item <?= ($currentController == 'Ekip') ? 'active' : '' ?>" href="index.php?controller=Ekip&action=index">
-                                Ekip Planlama
-                                </a>
-                                </li>
-                                <li><a class="dropdown-item" href="index.php?controller=Guvence&action=index">Güvence Türleri</a></li>
-                                <li><a class="dropdown-item" href="index.php?controller=User&action=list">Kullanıcı Yönetimi</a></li>
-                                <li><a class="dropdown-item" href="index.php?controller=Guvence&action=index">Güvence Türleri</a></li>
-                                <li><a class="dropdown-item" href="index.php?controller=User&action=list">Kullanıcı Yönetimi</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Hasta İşlemleri</h6></li>
-                                <li><a class="dropdown-item" href="index.php?controller=Patient&action=listdeleted">
-                                <i class="fa-solid fa-users me-2"></i>Silinen Hasta Listesi
-                                </a>
-                                </li>
-                                <li><a class="dropdown-item" href="index.php?controller=Patient&action=listdied">
-                                <i class="fa-solid fa-users me-2"></i>Ölen Hasta Listesi
-                                </a>
-                                </li>
-                                <li><a class="dropdown-item" href="index.php?controller=Patient&action=listaraf">
-                                <i class="fa-solid fa-users me-2"></i>Arafta Hasta Listesi
-                                </a>
-                                </li>
-                            </ul>
-                        </li>
-                        <?php endif; ?>
+<li class="nav-item dropdown position-static"> <a class="nav-link dropdown-toggle bg-warning text-dark rounded px-3 ms-lg-2" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-user-shield me-1"></i> Yönetim
+    </a>
+    
+    <ul class="dropdown-menu shadow-lg border-0 w-100 mt-0 p-4" aria-labelledby="adminDropdown" style="min-width: 600px;">
+        <li>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mt-3">
+                        <a class="dropdown-item fw-bold bg-light rounded <?= ($currentAction == 'admin') ? 'active' : 'text-primary' ?>" href="index.php?controller=Dashboard&action=admin">
+                            <i class="fas fa-chart-line me-2"></i>Admin Dashboard
+                        </a>
+                    </div>
+                    <h6 class="dropdown-header text-dark fw-bold border-bottom mb-2">
+                        <i class="fas fa-stethoscope me-1"></i> Tıbbi Tanımlamalar
+                    </h6>
+                    <a class="dropdown-item" href="index.php?controller=Brans&action=index">Branş Yönetimi</a>
+                    <a class="dropdown-item" href="index.php?controller=Hastalik&action=index">Hastalık Kütüphanesi</a>
+                    <a class="dropdown-item" href="index.php?controller=Islem&action=index">İşlem Tanımları</a>
+                    
+                    
+                </div>
+
+                <div class="col-md-4 border-start">
+                    <h6 class="dropdown-header text-dark fw-bold border-bottom mb-2">
+                        <i class="fas fa-cogs me-1"></i> Sistem Ayarları
+                    </h6>
+                    <a class="dropdown-item <?= ($currentController == 'Ekip') ? 'active' : '' ?>" href="index.php?controller=Ekip&action=index">Ekip Planlama</a>
+                    <a class="dropdown-item" <?= ($currentController == 'Guvence') ? 'active' : '' ?> href="index.php?controller=Guvence&action=index">Güvence Türleri</a>
+                    <a class="dropdown-item" <?= ($currentController == 'User') ? 'active' : '' ?> href="index.php?controller=User&action=list">Kullanıcı Yönetimi</a>
+                </div>
+
+                <div class="col-md-4 border-start">
+                    <h6 class="dropdown-header text-dark fw-bold border-bottom mb-2">
+                        <i class="fas fa-hospital-user me-1"></i> Hasta İşlemleri
+                    </h6>
+                    <a class="dropdown-item" href="index.php?controller=Patient&action=listdeleted">
+                        <i class="fa-solid fa-trash-can me-2 small"></i>Silinen Hastalar
+                    </a>
+                    <a class="dropdown-item" href="index.php?controller=Patient&action=listdied">
+                        <i class="fa-solid fa-skull me-2 small"></i>Ölen Hastalar
+                    </a>
+                    <a class="dropdown-item" href="index.php?controller=Patient&action=listaraf">
+                        <i class="fa-solid fa-hourglass-half me-2 small"></i>Araftaki Hastalar
+                    </a>
+                </div>
+            </div>
+        </li>
+    </ul>
+</li>
+<?php endif; ?>
                     </ul>
 
                     <ul class="navbar-nav ms-auto">

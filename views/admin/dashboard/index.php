@@ -1,114 +1,68 @@
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2 border-0 border-start border-4 border-primary">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Havuzdaki Toplam Rapor</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $stats['total_reports'] ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-file-medical fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+<div class="row">
+        <div class="col-lg-8">
+            <div class="row">
+                <div class="col-12">
+                    <?= \App\Helpers\StatHelper::yasGruplariGrafigi(); ?>
+                </div>
+                <div class="col-md-6">
+                    <?= \App\Helpers\StatHelper::cikarilmaNedenleriWidget(); ?>
+                </div>
+                <div class="col-md-6">
+                    <?= \App\Helpers\StatHelper::izlemSikligiWidget(); ?>
+                </div>
+                <div class="col-md-12">
+                     <?= \App\Helpers\StatHelper::izlenenYasGruplariWidget(); ?>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2 border-0 border-start border-4 border-success">
+        <div class="col-lg-4">
+            <?= \App\Helpers\StatHelper::genelIstatistikWidget(); ?>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-dark"><i class="fas fa-rocket me-2"></i>Hızlı İşlemler</h6>
+                </div>
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Sistemde Kayıtlı Hasta</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $stats['registered_patients'] ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
-                        </div>
+                    <div class="d-grid gap-2">
+                        <a href="index.php?controller=Erapor&action=create" class="btn btn-light text-start border-0 py-3 shadow-sm mb-1">
+                            <i class="fas fa-plus-circle text-primary me-2"></i> Yeni Rapor Oluştur
+                        </a>
+                        <a href="index.php?controller=User&action=list" class="btn btn-light text-start border-0 py-3 shadow-sm mb-1">
+                            <i class="fas fa-users text-secondary me-2"></i> Personel Listesi
+                        </a>
+                        <a href="index.php?controller=Brans&action=index" class="btn btn-light text-start border-0 py-3 shadow-sm mb-1">
+                            <i class="fas fa-tags text-info me-2"></i> Branş Yönetimi
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2 border-0 border-start border-4 border-info">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Yenilenen Raporlar</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $stats['renewed_reports'] ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-sync-alt fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
+            <?= \App\Helpers\StatHelper::dogumGunuListesi(); ?>
+            
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-hospital-user me-2"></i>Branş Yoğunluğu</h6>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2 border-0 border-start border-4 border-warning">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Aktif Personel</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $stats['total_users'] ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-nurse fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Branşlara Göre Rapor Yoğunluğu</h6>
-                </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="bg-light">
                                 <tr>
-                                    <th>Branş Adı</th>
-                                    <th class="text-end">Rapor Sayısı</th>
+                                    <th class="ps-3">Branş</th>
+                                    <th class="text-end pe-3">Adet</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach($stats['brans_dist'] as $b): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($b->brans ?: 'Belirtilmemiş') ?></td>
-                                    <td class="text-end fw-bold"><?= $b->count ?></td>
+                                    <td class="ps-3 small"><?= htmlspecialchars($b->brans ?: 'Belirtilmemiş') ?></td>
+                                    <td class="text-end pe-3 fw-bold small text-primary"><?= $b->count ?></td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-dark">Hızlı Erişim</h6>
-                </div>
-                <div class="card-body text-center">
-                    <a href="index.php?controller=Erapor&action=create" class="btn btn-outline-primary m-2 p-3" style="width: 140px;">
-                        <i class="fas fa-plus d-block mb-2"></i> Rapor Ekle
-                    </a>
-                    <a href="index.php?controller=User&action=list" class="btn btn-outline-secondary m-2 p-3" style="width: 140px;">
-                        <i class="fas fa-users d-block mb-2"></i> Kullanıcılar
-                    </a>
-                    <a href="index.php?controller=Brans&action=index" class="btn btn-outline-info m-2 p-3" style="width: 140px;">
-                        <i class="fas fa-tags d-block mb-2"></i> Branşlar
-                    </a>
                 </div>
             </div>
         </div>
