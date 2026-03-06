@@ -52,9 +52,27 @@ class UIHelper {
                             </ul>
                         </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link <?= ($currentController == 'PlannedVisit') ? 'active' : '' ?>" 
-                               href="index.php?controller=PlannedVisit&action=index">İzlem Takvimi</a>
+                        <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="izlemMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                İzlem İşlemleri
+                            </a>
+                            <ul class="dropdown-menu shadow border-0" aria-labelledby="izlemMenu">
+                            <li>
+                                    <a class="dropdown-item" href="index.php?controller=Visit&action=index">
+                                        <i class="fa-solid fa-user-check text-success me-2"></i>Aktif İzlem Listesi
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="index.php?controller=PlannedVisit&action=index">
+                                        <i class="fa-solid fa-user-slash text-secondary me-2"></i>Planlanmış İzlem Listesi
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="index.php?controller=Pansuman&action=index">
+                                        <i class="fa-solid fa-user-slash text-secondary me-2"></i>Pansuman Listesi
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
 
                         <li class="nav-item">
@@ -109,6 +127,9 @@ class UIHelper {
                     </a>
                     <a class="dropdown-item" href="index.php?controller=Patient&action=listaraf">
                         <i class="fa-solid fa-hourglass-half me-2 small"></i>Araftaki Hastalar
+                    </a>
+                    <a class="dropdown-item" href="index.php?controller=Patient&action=scan">
+                        <i class="fa-solid fa-hourglass-half me-2 small"></i>Toplu Vefat Taraması
                     </a>
                 </div>
             </div>

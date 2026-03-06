@@ -27,7 +27,7 @@ class AuthController {
         
         // 1. Kullanıcıyı bul
         if ($userModel->loadByUsername($username)) {
-            // 2. Şifre kontrolü (Sorunun çözümü burada)
+            // 2. Şifre kontrolü 
             if (password_verify($password, $userModel->password)) {
                 // 3. Giriş başarılı, session başla
                 if ($userModel->activated) {
@@ -36,7 +36,7 @@ class AuthController {
                 $_SESSION['username'] = $userModel->username;
                 $_SESSION['isadmin'] = $userModel->isadmin;
                 
-                $_SESSION['success'] = 'Giriş yapıldı';
+                //$_SESSION['success'] = 'Giriş yapıldı';
                 
                 $userModel->updateVisitDate($userModel->id); // Giriş tarihini güncelle
                 header("Location: index.php?controller=Dashboard");

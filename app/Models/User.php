@@ -120,7 +120,7 @@ class User extends BaseModel {
      */
     public function getList() {
         // Güvenlik için şifre (password) alanını çekmiyoruz
-        $query = "SELECT * FROM esh_users ORDER BY name ASC";
+        $query = "SELECT * FROM esh_users WHERE activated='1' ORDER BY name ASC";
         return $this->db->setQuery($query)->loadObjectList();
     }
 }

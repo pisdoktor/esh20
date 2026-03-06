@@ -18,7 +18,7 @@ class Islem extends BaseModel {
      * Tüm işlemleri listeler
      */
     public function getList() {
-        $sql = "SELECT * FROM esh_islemler ORDER BY id ASC";
+        $sql = "SELECT * FROM esh_islemler ORDER BY islemadi ASC";
         return $this->db->setQuery($sql)->loadObjectList();
     }
 }

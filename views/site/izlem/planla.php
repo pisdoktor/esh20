@@ -8,13 +8,14 @@
                 <strong>Hasta:</strong> <?= $patient->isim ?> <?= $patient->soyisim ?> (<?= $patient->tckimlik ?>)
             </div>
 
-            <form action="index.php?action=pizlem_kaydet" method="POST">
+            <form action="index.php?controller=PlannedVisit&action=store" method="POST">
                 <input type="hidden" name="hastatckimlik" value="<?= $patient->tckimlik ?>">
+                <input type="hidden" name="plantarihi" value="<?= date('Y-m-d');?>"> 
 
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">Planlanan Tarih ve Saat</label>
-                        <input type="datetime-local" name="planlanantarih" class="form-control" required>
+                        <input type="datetime" name="planlanantarih" class="form-control" required>
                     </div>
                     
                     <div class="col-md-3">
@@ -37,7 +38,12 @@
 
                     <div class="col-12">
                         <label class="form-label fw-bold small">Yapılacak İşlem</label>
-                        <textarea name="yapilacak" class="form-control" rows="3" placeholder="Örn: Pansuman yapılacak, ilaçları kontrol edilecek..." required></textarea>
+                        <?= $list['islem'];?>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label class="form-label fw-bold small">Planı Yapan</label>
+                        <?= $list['personel'];?>
                     </div>
 
                     <div class="col-12">

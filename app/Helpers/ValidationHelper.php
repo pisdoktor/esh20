@@ -70,6 +70,10 @@ class ValidationHelper {
     public static function checkDeathNotification($patient) {
         // 1 Ay önceki timestamp (Karşılaştırma için)
         $limitTimestamp = strtotime('-1 month');
+        $patient->isim = mb_strtoupper(trim($patient->isim), 'UTF-8');
+        $patient->soyisim = mb_strtoupper(trim($patient->soyisim), 'UTF-8');
+        $patient->anneAdi = mb_strtoupper(trim($patient->anneAdi), 'UTF-8');
+        $patient->babaAdi = mb_strtoupper(trim($patient->babaAdi), 'UTF-8');  
 
         // Belediye Sorgu Linki (UTF-8 karakter sorunlarını önlemek için urlencode kullanıyoruz)
         $link = "http://mezarlik.denizli.bel.tr/sorgu.ashx?islem=definListesiGetir";
@@ -106,5 +110,48 @@ class ValidationHelper {
 
         return false;
     }
+    
+/**
+ * TC Kimlik numarasını URL'de gizlemek için "anlamsız" bir hale getirir.
+ */
+function tc_encode($tc, $anahtar) {
+    // 1. Adım: Her rakamı basit bir anahtarla kaydır (Örn: +3 ekle)
+    // Bu sayede 1 -> 4, 9 -> 2 (mod 10) gibi değişir.
+    $anahtar = [3, 7, 1, 9, 4, 2, 8, 5, 0, 6, 3]; // 11 haneli gizli dizin
+    $yeniTc = "";
+    
+    for ($i = 0; $i < 11; $i++) {
+        $rakam = (int)$tcNo[$i];
+        $yeniRakam = ($rakam + $anahtar[$i]) % 10;
+        $yeniTc .= $yeniRakam;
+    }
 
+    // 2. Adım: Başına ve sonuna rastgele karakterler ekleyip hex yapalım
+    // Böylece kimse bunun bir TC olduğunu bile anlamaz.
+    return bin2hex("xyz" . $yeniTc . "abc");
+}
+
+/**
+ * URL'deki kodu tekrar orijinal TC'ye dönüştürür.
+ */
+function tc_decode($tc, $anahtar) {
+    // 1. Adım: Hex'ten metne geri çevir
+    $data = hex2bin($kod);
+    
+    // 2. Adım: Eklediğimiz "xyz" ve "abc" kısımlarını temizle
+    $yeniTc = substr($data, 3, 11);
+    
+    // 3. Adım: Kaydırmayı tersine çevir (Çıkarma işlemi)
+    $anahtar = [3, 7, 1, 9, 4, 2, 8, 5, 0, 6, 3];
+    $orijinalTc = "";
+    
+    for ($i = 0; $i < 11; $i++) {
+        $rakam = (int)$yeniTc[$i];
+        $eskiRakam = ($rakam - $anahtar[$i]);
+        if ($eskiRakam < 0) $eskiRakam += 10;
+        $orijinalTc .= $eskiRakam;
+    }
+
+    return $orijinalTc;
+}
 }

@@ -22,6 +22,54 @@ class Visit extends BaseModel {
         // 'esh_izlemler' tablosunu kullan, birincil anahtar 'id'
         parent::__construct('esh_izlemler', 'id');
     }
+    
+    public function getAllVisits($limit = 20, $offset = 0, $search = '', $filterYapildi = '', $ordering = 'i.izlemtarihi DESC') {
+        $where = [];
+        
+        // Arama filtresi (TC Kimlik veya İsim)
+        if (!empty($search)) {
+            $search = $this->db->quote('%' . $search . '%');
+            $where[] = "(i.hastatckimlik LIKE $search OR h.isim LIKE $search OR h.soyisim LIKE $search)";
+        }
+
+        // Yapıldı/Yapılmadı Filtresi
+        if ($filterYapildi !== '') {
+            $where[] = "i.yapildimi = " . (int)$filterYapildi;
+        }
+
+        $whereSql = count($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+        $query = "SELECT i.*, h.isim, h.soyisim, h.cinsiyet, isl.islemadi, 
+                         il.adi AS ilce, m.adi AS mahalle 
+                  FROM {$this->_tbl} AS i 
+                  LEFT JOIN esh_hastalar AS h ON h.tckimlik = i.hastatckimlik 
+                  LEFT JOIN esh_islemler AS isl ON isl.id = i.yapilan 
+                  LEFT JOIN esh_adrestablosu AS il ON il.id = h.ilce 
+                  LEFT JOIN esh_adrestablosu AS m ON m.id = h.mahalle 
+                  $whereSql 
+                  ORDER BY $ordering 
+                  LIMIT $limit OFFSET $offset";
+        
+        return $this->db->setQuery($query)->loadObjectList();
+    }
+
+    public function countAllVisits($search = '', $filterYapildi = '') {
+        $where = [];
+        if (!empty($search)) {
+            $search = $this->db->quote('%' . $search . '%');
+            $where[] = "(i.hastatckimlik LIKE $search OR h.isim LIKE $search OR h.soyisim LIKE $search)";
+        }
+        if ($filterYapildi !== '') {
+            $where[] = "i.yapildimi = " . (int)$filterYapildi;
+        }
+
+        $whereSql = count($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+        $query = "SELECT COUNT(i.id) FROM {$this->_tbl} AS i 
+                  LEFT JOIN esh_hastalar AS h ON h.tckimlik = i.hastatckimlik 
+                  $whereSql";
+        return $this->db->setQuery($query)->loadResult();
+    }
 
     
     /**
@@ -52,7 +100,7 @@ public function getYapilanIslemler() {
 
     // ÖNERİ: İzlemi yapan personelin adını getir
     public function getYapanPersonel() {
-        $sql = "SELECT name_surname FROM esh_users WHERE id = " . (int)$this->izlemiyapan;
+        $sql = "SELECT name FROM esh_users WHERE id = " . (int)$this->izlemiyapan;
         return $this->db->setQuery($sql)->loadResult();
     }
 }

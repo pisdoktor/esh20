@@ -91,52 +91,91 @@ public function getExitReasons() {
  * Bu ay izlemi yapılan hastaların yaş gruplarına göre dağılımını döner.
  */
 public function getMonthlyFollowUpAgeGroups() {
-    // 1. Önce bu ay izlemi yapılan benzersiz TC kimlikleri alt sorgu ile alıyoruz.
-    // 2. Ardından bu hastaların dogumtarihi üzerinden yaşlarını hesaplayıp grupluyoruz.
-    $query = "SELECT 
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) <= 1 THEN 1 ELSE 0 END) as g01,
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) = 2 THEN 1 ELSE 0 END) as g22,
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 3 AND 18 THEN 1 ELSE 0 END) as g318,
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 19 AND 45 THEN 1 ELSE 0 END) as g1945,
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 46 AND 65 THEN 1 ELSE 0 END) as g4665,
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 66 AND 85 THEN 1 ELSE 0 END) as g6685,
-        SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) >= 86 THEN 1 ELSE 0 END) as g86
-    FROM (
-        SELECT DISTINCT i.hastatckimlik 
-        FROM #__izlemler AS i 
-        WHERE STR_TO_DATE(i.izlemtarihi, '%d.%m.%Y') BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()) 
-        AND i.yapildimi = 1
-    ) as sub
-    LEFT JOIN #__hastalar AS h ON h.tckimlik = sub.hastatckimlik 
-    WHERE h.dogumtarihi IS NOT NULL";
+        $query = "SELECT 
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) <= 1 THEN 1 ELSE 0 END) as g01,
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) = 2 THEN 1 ELSE 0 END) as g22,
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 3 AND 18 THEN 1 ELSE 0 END) as g318,
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 19 AND 45 THEN 1 ELSE 0 END) as g1945,
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 46 AND 65 THEN 1 ELSE 0 END) as g4665,
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) BETWEEN 66 AND 85 THEN 1 ELSE 0 END) as g6685,
+            SUM(CASE WHEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(h.dogumtarihi, '%Y.%m.%d'), CURDATE()) >= 86 THEN 1 ELSE 0 END) as g86
+        FROM (
+            SELECT DISTINCT i.hastatckimlik FROM #__izlemler AS i 
+            WHERE STR_TO_DATE(i.izlemtarihi, '%d.%m.%Y') BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()) 
+            AND i.yapildimi = 1
+        ) as sub
+        LEFT JOIN #__hastalar AS h ON h.tckimlik = sub.hastatckimlik 
+        WHERE h.dogumtarihi IS NOT NULL AND h.dogumtarihi != ''";
 
-    return $this->db->setQuery($query)->loadObject();
-}
+        $res = $this->db->setQuery($query)->loadObject();
+        // Eğer veri yoksa NULL dönmesini engelle
+        if(!$res || $res->g01 === null) {
+            return (object)['g01'=>0,'g22'=>0,'g318'=>0,'g1945'=>0,'g4665'=>0,'g6685'=>0,'g86'=>0];
+        }
+        return $res;
+    }
 
 /**
  * Dashboard için genel istatistik sayılarını döner
+ */
+/**
+ * Dashboard için genel istatistik sayılarını döner
+ * @return object
  */
 public function getGeneralStats() {
     $thisyear  = date('Y');
     $thismonth = date('m');
 
-    // Boş şablonlar (Eğer sorgu başarısız olursa sistem çökmesin diye)
-    $emptyGeneral = (object)['total_reached' => 0, 'active_total' => 0, 'active_male' => 0, 'active_female' => 0, 'fully_dependent' => 0];
-    $emptyNew     = (object)['new_male' => 0, 'new_female' => 0];
-    $emptyExit    = (object)['exit_male' => 0, 'exit_female' => 0];
+    // Veri bulunamadığında (false döndüğünde) kullanılacak boş şablonlar
+    $emptyGeneral = (object)[
+        'total_reached' => 0, 
+        'active_total' => 0, 
+        'active_male' => 0, 
+        'active_female' => 0, 
+        'fully_dependent' => 0
+    ];
+    $emptyNew = (object)[
+        'new_male' => 0, 
+        'new_female' => 0
+    ];
+    $emptyExit = (object)[
+        'exit_male' => 0, 
+        'exit_female' => 0
+    ];
 
-    // 1. Genel Sorgu
-    $query1 = "SELECT COUNT(id) as total_reached, ... (Sorgunun Devamı) ...";
+    // 1. GENEL SORGU: Toplam ulaşılan, aktifler ve bağımlılık durumu
+    $query1 = "SELECT 
+                COUNT(id) as total_reached,
+                IFNULL(SUM(CASE WHEN pasif = '0' THEN 1 ELSE 0 END), 0) as active_total,
+                IFNULL(SUM(CASE WHEN pasif = '0' AND (cinsiyet = 'E' OR cinsiyet = '1') THEN 1 ELSE 0 END), 0) as active_male,
+                IFNULL(SUM(CASE WHEN pasif = '0' AND (cinsiyet = 'K' OR cinsiyet = '2') THEN 1 ELSE 0 END), 0) as active_female,
+                IFNULL(SUM(CASE WHEN pasif = '0' AND bagimlilik = '2' THEN 1 ELSE 0 END), 0) as fully_dependent
+              FROM {$this->_tbl} 
+              WHERE pasif IN ('1','0','-1','-3')";
+    
     $stats = $this->db->setQuery($query1)->loadObject() ?: $emptyGeneral;
 
-    // 2. Yeni Hasta Sorgusu
-    $query2 = "SELECT ... FROM {$this->_tbl} WHERE pasif = '0' AND kayityili = '$thisyear' AND kayitay = '$thismonth'";
+    // 2. YENİ HASTA SORGUSU: Bu ay takibe başlananlar
+    $query2 = "SELECT 
+                IFNULL(SUM(CASE WHEN (cinsiyet = 'E' OR cinsiyet = '1') THEN 1 ELSE 0 END), 0) as new_male,
+                IFNULL(SUM(CASE WHEN (cinsiyet = 'K' OR cinsiyet = '2') THEN 1 ELSE 0 END), 0) as new_female
+              FROM {$this->_tbl} 
+              WHERE pasif = '0' AND kayityili = '$thisyear' AND kayitay = '$thismonth'";
+    
     $newPatients = $this->db->setQuery($query2)->loadObject() ?: $emptyNew;
 
-    // 3. Çıkarılan Hasta Sorgusu
-    $query3 = "SELECT ... FROM {$this->_tbl} WHERE pasif = '1' AND pasiftarihi >= ...";
+    // 3. ÇIKARILAN HASTA SORGUSU: Bu ay pasife alınanlar (pasiftarihi Y-m-d formatında olduğu varsayıldı)
+    $query3 = "SELECT 
+                IFNULL(SUM(CASE WHEN (cinsiyet = 'E' OR cinsiyet = '1') THEN 1 ELSE 0 END), 0) as exit_male,
+                IFNULL(SUM(CASE WHEN (cinsiyet = 'K' OR cinsiyet = '2') THEN 1 ELSE 0 END), 0) as exit_female
+              FROM {$this->_tbl} 
+              WHERE pasif = '1' 
+              AND pasiftarihi >= DATE_FORMAT(NOW() ,'%Y-%m-01') 
+              AND pasiftarihi <= LAST_DAY(NOW())";
+    
     $exitPatients = $this->db->setQuery($query3)->loadObject() ?: $emptyExit;
 
+    // Tüm verileri tek bir ana nesne içinde döndür
     return (object)[
         'general' => $stats,
         'new'     => $newPatients,

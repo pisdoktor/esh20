@@ -10,8 +10,7 @@ use App\Models\Visit;
 use App\Models\PlannedVisit;
 
 class PatientController {
-    
-    
+
     // Aktif hastaları listeler pasif=0
     public function listactive() { 
     // 1. Parametreleri Yakala
@@ -145,9 +144,16 @@ class PatientController {
     
     //Ölen hastaları listeler pasif=-1
     public function listdied() {
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+       // 1. Parametreleri Yakala
+    $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+    $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset   = ($page - 1) * $limit;
+    $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    
+    // 2. Sıralama Mantığı
+    $orderby  = $_GET['orderby'] ?? 'h.isim';
+    $orderdir = (isset($_GET['orderdir']) && strtoupper($_GET['orderdir']) === 'DESC') ? 'DESC' : 'ASC';
+    $ordering = $orderby . ' ' . $orderdir;
 
         $model = new Patient();
         
@@ -162,36 +168,22 @@ class PatientController {
 
         $pageTitle = "Ölen Hasta Listesi";
         include '../views/partials/header.php';
-        include '../views/site/hasta/liste.php';
+        include '../views/admin/hasta/listdied.php';
         include '../views/partials/footer.php';
-    }
-    
-    //Bekleyen hasta detay gösterimi
-    public function bview() {
-    
-    }
-    
-    //bekelyen hasta düzenlemesi
-    public function bedit() {
-        $id = $_GET['id'];
-        $patient = (new Patient())->getById($id);
-        
-        $districts = (new Address())->getDistricts();
-        
-        $guvence = (new Guvence())->getList(); 
-
-        $patient->diger_adres = $data = json_decode($patient->diger_adres ?? '[]', true);
-        include '../views/partials/header.php';
-        include '../views/site/hasta/bedit.php';
-        include '../views/partials/footer.php';
-    
     }
     
     //Araftaki hastaları listeler pasif=4
     public function listaraf() {
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+           // 1. Parametreleri Yakala
+    $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+    $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset   = ($page - 1) * $limit;
+    $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    
+    // 2. Sıralama Mantığı
+    $orderby  = $_GET['orderby'] ?? 'h.isim';
+    $orderdir = (isset($_GET['orderdir']) && strtoupper($_GET['orderdir']) === 'DESC') ? 'DESC' : 'ASC';
+    $ordering = $orderby . ' ' . $orderdir;
 
         $model = new Patient();
         
@@ -206,33 +198,65 @@ class PatientController {
 
         $pageTitle = "Arafta Bekleyen Hasta Listesi";
         include '../views/partials/header.php';
-        include '../views/site/hasta/liste.php';
+        include '../views/admin/hasta/listaraf.php';
         include '../views/partials/footer.php';
     } 
     
     //Silinen hastaları listeler pasif=5
     public function listdeleted() {
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $offset = ($page - 1) * $limit;
+        $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+        $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $offset   = ($page - 1) * $limit;
+        $search   = isset($_GET['search']) ? trim($_GET['search']) : ''; // Arama terimini al
+    
+        // 2. Sıralama Mantığı
+        $orderby  = $_GET['orderby'] ?? 'h.isim';
+        $orderdir = (isset($_GET['orderdir']) && strtoupper($_GET['orderdir']) === 'DESC') ? 'DESC' : 'ASC';
+        $ordering = $orderby . ' ' . $orderdir;
 
         $model = new Patient();
         
-        $totalPatients = $model->countAllDeleted(); 
-        $patients = $model->getAllDeleted($limit, $offset);
+        $totalPatients = $model->countAllDeleted($search); 
+        $patients = $model->getAllDeleted($limit, $offset, $ordering, $search);
         $totalPages = ceil($totalPatients / $limit);
         
-        $pagelink = "index.php?controller=Patient&action=listdeleted";
         $viewlink = "index.php?controller=Patient&action=dview&id=";
         $editlink = "index.php?controller=Patient&action=dedit&id=";
         $deletelink = "";
+        
+        $pagelink = "index.php?controller=Patient&action=listdeleted";
+        if (isset($search)) {
+        $pagelink .= "&search=".$search;
+        }
 
         $pageTitle = "Silinen Hasta Listesi";
         include '../views/partials/header.php';
-        include '../views/site/hasta/liste.php';
+        include '../views/admin/hasta/listdeleted.php';
         include '../views/partials/footer.php';
     }
     
+    //Bekleyen hasta detay gösterimi
+    public function bview() {
+    
+    }
+    
+    //bekleyen hasta düzenlemesi
+    public function bedit() {
+        $id = $_GET['id'];
+        $patient = (new Patient())->getById($id);
+        
+        $districts = (new Address())->getDistricts();
+        
+        $guvence = (new Guvence())->getList(); 
+
+        $patient->diger_adres = $data = json_decode($patient->diger_adres ?? '[]', true);
+        include '../views/partials/header.php';
+        include '../views/site/hasta/bedit.php';
+        include '../views/partials/footer.php';
+    
+    }
+
+    //hasta ilk kayıt
     public function ilkkayit() {
         
         $districts = (new Address())->getDistricts(); 
@@ -246,6 +270,7 @@ class PatientController {
         include '../views/partials/footer.php';
     }
     
+    //ilk kayıt hasta kaydetme
     public function fsave() {
         $model = new Patient();
         $data = $_POST;
@@ -290,6 +315,7 @@ class PatientController {
         exit;
     }
 
+    //hasta düzenleme
     public function edit() {
         $id = $_GET['id'];
         $patient = (new Patient())->getById($id);
@@ -299,48 +325,18 @@ class PatientController {
         
         $guvence = (new Guvence())->getList();
         
-          $barthelFields = [
-    'barbeslenme' => [
-        'label' => 'Beslenme', 'max' => 10, 
-        'desc' => '0: Bağımlı, 5: Yardımla (kesme vb.), 10: Bağımsız'
-    ],
-    'barbanyo' => [
-        'label' => 'Banyo', 'max' => 5, 
-        'desc' => '0: Bağımlı, 5: Bağımsız'
-    ],
-    'barbakim' => [
-        'label' => 'Kişisel Bakım', 'max' => 5, 
-        'desc' => '0: Yardımla, 5: Bağımsız (yüz yıkama, diş fırçalama vb.)'
-    ],
-    'bargiyinme' => [
-        'label' => 'Giyinme', 'max' => 10, 
-        'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız (düğme, bağcık dahil)'
-    ],
-    'barbarsak' => [
-        'label' => 'Bağırsak', 'max' => 10, 
-        'desc' => '0: İnkontinan, 5: Arada kaza olur, 10: Kontrollü'
-    ],
-    'barmesane' => [
-        'label' => 'Mesane', 'max' => 10, 
-        'desc' => '0: İnkontinan, 5: Arada kaza olur, 10: Kontrollü'
-    ],
-    'bartuvalet' => [
-        'label' => 'Tuvalet', 'max' => 10, 
-        'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'
-    ],
-    'bartransfer' => [
-        'label' => 'Transfer', 'max' => 15, 
-        'desc' => '0: Bağımlı, 5: İleri derece yardım, 10: Hafif yardım, 15: Bağımsız'
-    ],
-    'barmobilite' => [
-        'label' => 'Mobilite', 'max' => 15, 
-        'desc' => '0: İmmobil, 5: Tekerlekli sandalye, 10: Yardımla yürüme, 15: Bağımsız'
-    ],
-    'barmerdiven' => [
-        'label' => 'Merdiven', 'max' => 10, 
-        'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'
-    ]
-];
+        $barthelFields = [
+            'barbeslenme'  => ['label' => 'Beslenme',      'max' => 10, 'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'],
+            'barbanyo'     => ['label' => 'Banyo',         'max' => 5,  'desc' => '0: Bağımlı, 5: Bağımsız'],
+            'barbakim'     => ['label' => 'Kişisel Bakım', 'max' => 5,  'desc' => '0: Yardımla, 5: Bağımsız'],
+            'bargiyinme'   => ['label' => 'Giyinme',       'max' => 10, 'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'],
+            'barbarsak'    => ['label' => 'Bağırsak',      'max' => 10, 'desc' => '0: İnkontinan, 5: Kaza, 10: Kontrollü'],
+            'barmesane'    => ['label' => 'Mesane',        'max' => 10, 'desc' => '0: İnkontinan, 5: Kaza, 10: Kontrollü'],
+            'bartuvalet'   => ['label' => 'Tuvalet',       'max' => 10, 'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız'],
+            'bartransfer'  => ['label' => 'Transfer',      'max' => 15, 'desc' => '0: Bağımlı, 5: İleri Yrd, 10: Hafif Yrd, 15: Bağımsız'],
+            'barmobilite'  => ['label' => 'Mobilite',      'max' => 15, 'desc' => '0: İmmobil, 5: TS, 10: Yrd. Yürüme, 15: Bağımsız'],
+            'barmerdiven'  => ['label' => 'Merdiven',      'max' => 10, 'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız']
+        ];
         $barthelscore = (new Patient())->getBarthelScore();
         
         // En başa "Seçiniz" seçeneği ekleyelim (Obje olarak)
@@ -365,11 +361,13 @@ class PatientController {
         $bopt = \App\Helpers\FormHelper::selectList($boption, 'bagimlilik', '', 'value', 'text', $patient->bagimlilik);
                 
         $patient->diger_adres = json_decode($patient->diger_adres ?? '[]', true);
+        
         include '../views/partials/header.php';
         include '../views/site/hasta/edit.php';
         include '../views/partials/footer.php';
     }
     
+    //hasta bilgi gösterme
     public function view() {
         $id = $_GET['id'];
         $hasta = (new Patient())->getById($id);
@@ -412,6 +410,7 @@ class PatientController {
         include '../views/partials/footer.php';
     }
     
+    //hasta bilgileri kayıt
     public function store() {
         
         $patient = new Patient();
@@ -480,6 +479,7 @@ class PatientController {
         exit;
     }
     
+    //hasta tc kontrol
     public function checkTC() {
     // Güvenlik: TC gelmezse işlemi durdur
     if (!isset($_GET['tc'])) return;
@@ -503,6 +503,7 @@ class PatientController {
     exit; 
 }
 
+    //tekli hasta ölüm sorgulama
     public function died() {
     // 1. Güvenlik: TC parametresini al ve temizle
     $tc = $_GET['tc'];
@@ -542,6 +543,9 @@ class PatientController {
     return $oldu;
 }
 
+    /**
+    * @desc Hasta not işlemleri
+    */
     public function prepareNotes($existingJson, $newNote) {
     // 1. Mevcut notları çöz (Eğer boşsa boş dizi oluştur)
     $notesArray = json_decode($existingJson, true) ?: [];
@@ -613,6 +617,70 @@ class PatientController {
     } else {
         echo json_encode(['success' => false, 'message' => 'Not bulunamadı.']);
     }
+    exit;
+}
+
+    public function scan() {
+        
+        $model = new Patient();
+        // Toplam aktif hasta sayısını alıyoruz (Sadece ilk istekte veya her seferinde gönderilebilir)
+        $totalCount = $model->countPatientsForScan();
+        
+    include '../views/partials/header.php';
+    include '../views/admin/hasta/scan.php';
+    include '../views/partials/footer.php';
+    }
+
+    public function bulkDiedScan() {
+    // JS'den gelen offset değerini al
+    $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+    $limit = 20;
+
+    $model = new Patient();
+    $patients = $model->getPatientsForScan($offset, $limit);
+    
+    $results = [];
+    foreach ($patients as $p) {
+        $check = \App\Helpers\ValidationHelper::checkDeathNotification($p);
+        
+        if ($check) {
+            $model->load($p->id);
+            $pasiftarihi = date('Y-m-d', strtotime($check));
+            
+            $newNote = 'Vefat etti: '. $check;
+            
+            $notesArray[] = [
+            'date'    => date('d.m.Y H:i'), // Otomatik tarih ve saat
+            'user'    => $_SESSION['name'] ?? 'Sistem', // Opsiyonel: Notu yazan kişi
+            'message' => htmlspecialchars($newNote)
+            ];
+
+            $notes = json_encode($notesArray, JSON_UNESCAPED_UNICODE);
+            
+            $model->pasif = '-1';
+            $model->pasifnedeni = '1'; //vefat
+            $model->pasiftarihi = $pasiftarihi;
+            $model->store();
+        }
+        
+        $oldu = $check ? '1':'0';
+
+        $results[] = [
+            'tc'    => $p->tckimlik,
+            'ad'    => $p->isim . ' ' . $p->soyisim,
+            'anneAdi' => $p->anneAdi,
+            'babaAdi' => $p->babaAdi,
+            'oldu'  => $oldu,
+            'tarih' => $check
+        ];
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode([
+        'processed' => count($patients),
+        'results'   => $results,
+        'nextOffset' => $offset + $limit
+    ]);
     exit;
 }
 }

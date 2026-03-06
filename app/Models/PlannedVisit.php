@@ -19,7 +19,55 @@ class PlannedVisit extends BaseModel {
         parent::__construct('esh_pizlemler', 'id');
     }
     
-// app/Models/PlannedVisit.php içindeki getMonthPlans metodu:
+    /**
+     * Planlanmış izlemleri filtreli ve sayfalı olarak getirir
+     */
+    public function getAllPlanned($limit = 20, $offset = 0, $search = '', $status = '', $ordering = 'p.planlanan_tarih ASC') {
+        $where = [];
+        
+        // Arama (TC veya İsim)
+        if (!empty($search)) {
+            $searchStr = $this->db->quote('%' . $search . '%');
+            $where[] = "(p.hastatckimlik LIKE $searchStr OR h.isim LIKE $searchStr OR h.soyisim LIKE $searchStr)";
+        }
+
+        // Durum Filtresi (0: Bekliyor, 1: Tamamlandı/İşleme Alındı)
+        if ($status !== '') {
+            $where[] = "p.durum = " . (int)$status;
+        }
+
+        $whereSql = count($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+        $query = "SELECT p.*, h.isim, h.soyisim, h.cinsiyet, h.telefon,
+                         il.adi AS ilce, m.adi AS mahalle
+                  FROM {$this->_tbl} AS p
+                  LEFT JOIN esh_hastalar AS h ON h.tckimlik = p.hastatckimlik
+                  LEFT JOIN esh_adrestablosu AS il ON il.id = h.ilce
+                  LEFT JOIN esh_adrestablosu AS m ON m.id = h.mahalle
+                  $whereSql
+                  ORDER BY $ordering
+                  LIMIT $limit OFFSET $offset";
+        
+        return $this->db->setQuery($query)->loadObjectList();
+    }
+
+    public function countAllPlanned($search = '', $status = '') {
+        $where = [];
+        if (!empty($search)) {
+            $searchStr = $this->db->quote('%' . $search . '%');
+            $where[] = "(p.hastatckimlik LIKE $searchStr OR h.isim LIKE $searchStr OR h.soyisim LIKE $searchStr)";
+        }
+        if ($status !== '') {
+            $where[] = "p.durum = " . (int)$status;
+        }
+
+        $whereSql = count($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+        $query = "SELECT COUNT(p.id) FROM {$this->_tbl} AS p
+                  LEFT JOIN esh_hastalar AS h ON h.tckimlik = p.hastatckimlik
+                  $whereSql";
+        return $this->db->setQuery($query)->loadResult();
+    }
 
     public function getMonthPlans($year, $month) {
     

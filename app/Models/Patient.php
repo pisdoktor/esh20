@@ -261,49 +261,130 @@ class Patient extends BaseModel {
     }
     
     //ölen hastalar
-    public function countAllDied() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='-1'";
-        return $this->db->setQuery($query)->loadResult();
+    public function countAllDied($search = '') {
+    $where = "WHERE h.pasif = '-1'";
+    // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
+    $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id";
+    
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    return $this->db->setQuery($sql . " " . $where)->loadResult();
     }
     
-    public function getAllDied($limit = 10, $offset = 0) {
-        $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
-                  FROM esh_hastalar h
-                  LEFT JOIN esh_adrestablosu i ON h.ilce = i.id
-                  LEFT JOIN esh_adrestablosu m ON h.mahalle = m.id
-                  WHERE pasif='-1' ORDER BY h.id DESC";
-        
-        return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
+    public function getAllDied($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+     $where = "WHERE h.pasif = '-1'";
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    $sql = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
+            (SELECT izlemtarihi FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1 ORDER BY izlemtarihi DESC LIMIT 1) as sonizlemtarihi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1) as izlemsayisi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 0) as yizlemsayisi,
+            (SELECT COUNT(id) FROM esh_pizlemler WHERE hastatckimlik = h.tckimlik) as totalplanli
+            FROM esh_hastalar as h
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id
+            LEFT JOIN esh_adrestablosu as a2 ON h.mahalle = a2.id
+            LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
+            LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
+            {$where}
+            GROUP BY h.id
+            ORDER BY {$ordering}";
+    
+    return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
     }
     //silinen hastalar
-    public function countAllDeleted() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='5'";
-        return $this->db->setQuery($query)->loadResult();
+    public function countAllDeleted($search = '') {
+    $where = "WHERE h.pasif = 5";
+    // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
+    $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id";
+    
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    return $this->db->setQuery($sql . " " . $where)->loadResult();
     }
     
-    public function getAllDeleted($limit = 10, $offset = 0) {
-        $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
-                  FROM esh_hastalar h
-                  LEFT JOIN esh_adrestablosu i ON h.ilce = i.id
-                  LEFT JOIN esh_adrestablosu m ON h.mahalle = m.id
-                  WHERE pasif='5' ORDER BY h.id DESC";
-        
-        return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
+    public function getAllDeleted($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+    $where = "WHERE h.pasif = 5";
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    $sql = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
+            (SELECT izlemtarihi FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1 ORDER BY izlemtarihi DESC LIMIT 1) as sonizlemtarihi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1) as izlemsayisi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 0) as yizlemsayisi,
+            (SELECT COUNT(id) FROM esh_pizlemler WHERE hastatckimlik = h.tckimlik) as totalplanli
+            FROM esh_hastalar as h
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id
+            LEFT JOIN esh_adrestablosu as a2 ON h.mahalle = a2.id
+            LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
+            LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
+            {$where}
+            GROUP BY h.id
+            ORDER BY {$ordering}";
+    
+    return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
     }
     //muhtemel ölenler
-    public function countAllAraf() {
-        $query = "SELECT COUNT(*) FROM esh_hastalar WHERE pasif='4'";
-        return $this->db->setQuery($query)->loadResult();
+    public function countAllAraf($search = '') {
+    $where = "WHERE h.pasif = 4";
+    // JOIN her zaman olmalı ki a1.adi sütununa erişebilelim
+    $sql = "SELECT COUNT(h.id) FROM esh_hastalar as h 
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id";
+    
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    return $this->db->setQuery($sql . " " . $where)->loadResult();
     }
     
-    public function getAllAraf($limit = 10, $offset = 0) {
-        $query = "SELECT h.*, i.adi as ilce_adi, m.adi as mahalle_adi 
-                  FROM esh_hastalar h
-                  LEFT JOIN esh_adrestablosu i ON h.ilce = i.id
-                  LEFT JOIN esh_adrestablosu m ON h.mahalle = m.id
-                  WHERE pasif='4' ORDER BY h.id DESC";
-        
-        return $this->db->setQuery($query, $offset, $limit)->loadObjectList();
+    public function getAllAraf($limit = 20, $offset = 0, $ordering = 'h.isim ASC', $search = '') {
+    $where = "WHERE h.pasif = 4";
+    if (!empty($search)) {
+        $where .= " AND (h.isim LIKE '%{$search}%' 
+                    OR h.soyisim LIKE '%{$search}%' 
+                    OR h.tckimlik LIKE '%{$search}%' 
+                    OR a1.adi LIKE '%{$search}%')";
+    }
+
+    $sql = "SELECT h.*, a1.adi as ilce_adi, a2.adi as mahalle_adi, a3.adi AS sokak_adi, a4.adi AS kapino,
+            (SELECT izlemtarihi FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1 ORDER BY izlemtarihi DESC LIMIT 1) as sonizlemtarihi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 1) as izlemsayisi,
+            (SELECT COUNT(id) FROM esh_izlemler WHERE hastatckimlik = h.tckimlik AND yapildimi = 0) as yizlemsayisi,
+            (SELECT COUNT(id) FROM esh_pizlemler WHERE hastatckimlik = h.tckimlik) as totalplanli
+            FROM esh_hastalar as h
+            LEFT JOIN esh_adrestablosu as a1 ON h.ilce = a1.id
+            LEFT JOIN esh_adrestablosu as a2 ON h.mahalle = a2.id
+            LEFT JOIN esh_adrestablosu as a3 ON h.sokak = a3.id
+            LEFT JOIN esh_adrestablosu as a4 ON h.kapino = a4.id
+            {$where}
+            GROUP BY h.id
+            ORDER BY {$ordering}";
+    
+    return $this->db->setQuery($sql, $offset, $limit)->loadObjectList();
     }
     /**
      * TC Kimlik numarasına göre tek bir hasta nesnesi döndürür
@@ -312,7 +393,6 @@ class Patient extends BaseModel {
         $query = "SELECT * FROM esh_hastalar WHERE tckimlik = " . $this->db->quote($tc);
         return $this->db->setQuery($query)->loadObject();
     }
-
     /**
      * ID'ye göre tek bir hasta nesnesi döndürür
      */
@@ -336,25 +416,46 @@ class Patient extends BaseModel {
     }
     
     //Hastayı pasife alma
-    public function setPassive($reason, $date = null) {
-        $this->pasif = 1;
+    public function setPassive($reason, $type, $date = null) {
+        $this->pasif = $type;
         $this->pasifnedeni = (int)$reason;
         $this->pasiftarihi = $date ?? date('Y-m-d');
         return $this->store(); // BaseModel'deki kaydetme yeteneğini kullanır
     }
-    
     /**
-     * Rapor süresi yaklaşan hastaları kontrol eder (Mama veya Bez)
-     * @param string $type 'mama' veya 'bez'
-     * @param int $days Kaç gün kala uyarı versin?
+     * Raporun süresinin dolmak üzere olup olmadığını kontrol eder.
+     * * @param string $type Rapor türü: 'mama', 'bez' veya 'sonda'
+     * @param int $days Kaç gün kala uyarı verileceği (Varsayılan: 15)
+     * @return bool
      */
     public function isReportExpiring($type = 'mama', $days = 15) {
-        $prop = ($type == 'mama') ? 'mamaraporbitis' : 'bezraporbitis';
+        // 1. Tip bazlı özellik ismini belirleyelim
+        if ($type == 'mama') {
+            $prop = 'mamaraporbitis';
+        } elseif ($type == 'bez') {
+            $prop = 'bezraporbitis';
+        } elseif ($type == 'sonda') {
+            $prop = 'sondatarihi';
+        } else {
+            return false; // Bilinmeyen bir tip gelirse false dön
+        }
+
+        // 2. Veritabanındaki tarih boş mu kontrol edelim
         if (empty($this->$prop)) return false;
 
-        $expiryDate = strtotime($this->$prop);
+        // 3. Bitiş tarihini hesaplayalım
+        if ($type == 'sonda') {
+            // Sonda için: sondatarihi + 30 gün
+            $expiryDate = strtotime($this->$prop . " +30 days");
+        } else {
+            // Mama ve Bez için: Doğrudan ilgili sütun tarihi
+            $expiryDate = strtotime($this->$prop);
+        }
+
+        // 4. Uyarı limitini hesaplayalım (Bugün + $days)
         $warningLimit = strtotime("+$days days");
 
+        // Bitiş tarihi uyarı limitinin içindeyse true döner
         return $expiryDate <= $warningLimit;
     }
 
@@ -402,6 +503,9 @@ class Patient extends BaseModel {
         return $this->db->setQuery($query)->loadResult();
     }
     
+    /**
+    * Ölüm kontrolünde kullanılan fonksiyon
+    */
     public function died($tc) {
     
         $sql = "SELECT 
@@ -411,5 +515,22 @@ class Patient extends BaseModel {
                 
         return $this->db->setQuery($sql)->loadObject();
     
+    }
+    
+    // 20'şerli paket çekme (Sıralama tckimlik ASC)
+    public function getPatientsForScan($offset = 0, $limit = 20) {
+        $query = "SELECT id, tckimlik, isim, soyisim, anneAdi, babaAdi 
+                  FROM esh_hastalar 
+                  WHERE pasif = '0' 
+                  ORDER BY tckimlik ASC 
+                  LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        
+        return $this->db->setQuery($query)->loadObjectList();
+    }
+    
+    public function countPatientsForScan() {
+        $query = "SELECT COUNT(id) FROM esh_hastalar WHERE pasif = '0'";
+        
+        return $this->db->setQuery($query)->loadResult();
     }
 }

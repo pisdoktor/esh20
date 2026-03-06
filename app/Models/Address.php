@@ -15,6 +15,8 @@ class Address extends BaseModel {
     public $adi = null;
     public $ust_id = null;  // Parent ID
     public $tip = null;     // ilce, mahalle, sokak, kapino
+    public $bolge = null;
+    public $gun =  null;
 
     public function __construct() {
         // esh_adrestablosu tablosu, anahtar sütunu 'id'
@@ -211,7 +213,7 @@ class Address extends BaseModel {
         return \App\Helpers\FormHelper::selectList($options, $tip, $requiredtext, 'value', 'text', $current_val);
     }
 
-    function generateAdresAciklama($name, $value, $element_id) {
+    public function generateAdresAciklama($name, $value, $element_id) {
         // HTML stringini PHP4 uyumlu birleştiriyoruz
         $html = '<textarea name="' . $name . '" id="' . $element_id . '" class="form-control" rows="2" placeholder="Adres detayı (Bina adı, Kat, Daire vb.)">' . $value . '</textarea>';
         return $html;
