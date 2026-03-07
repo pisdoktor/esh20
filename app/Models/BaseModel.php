@@ -70,7 +70,6 @@ class BaseModel {
      * Veritabanından belirli bir ID'ye göre veriyi çeker ve modele yükler.
      */
     public function load($id) {
-        $id = (int) $id;
         $query = "SELECT * FROM {$this->_tbl} WHERE {$this->_tbl_key} = " . $this->db->quote($id);
         $res = $this->db->setQuery($query)->loadObject();
 
@@ -106,5 +105,16 @@ class BaseModel {
                 $this->$k = null;
             }
         }
+    }
+    
+    /**
+     * Modelin bir özelliğine değer atar.
+     * Zincirleme kullanım için $this döner.
+     */
+    public function set($field, $value) {
+        if (property_exists($this, $field)) {
+            $this->$field = $value;
+        }
+        return $this; // Zincirleme (Fluent) yapı için
     }
 }

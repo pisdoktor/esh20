@@ -417,8 +417,8 @@ class Patient extends BaseModel {
     
     //Hastayı pasife alma
     public function setPassive($reason, $type, $date = null) {
-        $this->pasif = $type;
         $this->pasifnedeni = (int)$reason;
+        $this->pasif = $type;
         $this->pasiftarihi = $date ?? date('Y-m-d');
         return $this->store(); // BaseModel'deki kaydetme yeteneğini kullanır
     }

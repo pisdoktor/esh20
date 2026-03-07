@@ -44,14 +44,13 @@
 <script>
 let currentOffset = 0;
 let totalFound = 0;
-let totalRecords = 0; 
+let totalRecords = <?= $totalCount;?>; 
 
 function startScan() {
-    if(!confirm("Tüm aktif hastalar taranacak. Emin misiniz?")) return;
+    if(!confirm("Tüm aktif hastalar taranacak. Sadece vefat edenler listelenecektir. Emin misiniz?")) return;
     
     currentOffset = 0;
     totalFound = 0;
-    totalRecords = <?= $totalCount;?>;
     
     $("#logBody").empty();
     $("#progressArea").removeClass("d-none");
@@ -66,23 +65,26 @@ function runBatch() {
         if (data.processed > 0) {
         
             data.results.forEach(function(item) {
-                let rowClass = item.oldu == 1 ? 'table-danger' : '';
-                let statusIcon = item.oldu == 1 ? '<i class="fa-solid fa-skull me-2 small"></i>VEFAT ('+item.tarih+')' : '<i class="fa fa-check text-success me-2"></i>SAĞ';
-                
+                // Sadece vefat edenleri (item.oldu == 1) işleme al ve tabloya ekle
                 if(item.oldu == 1) {
                     totalFound++;
+                    
+                    let statusIcon = '<i class="fa-solid fa-skull me-2 small"></i>VEFAT ('+item.tarih+')';
+                    let rowClass = 'table-danger';
+
+                    // Tabloya ekleme işlemini sadece bu koşulda yapıyoruz
+                    $("#logBody").prepend(
+                        `<tr class="${rowClass}">
+                            <td>${item.tc}</td>
+                            <td>${item.ad}</td>
+                            <td>${item.anneAdi}</td>
+                            <td>${item.babaAdi}</td>
+                            <td>${statusIcon}</td>
+                        </tr>`
+                    );
+
                     toastr.error(item.ad + " vefat etmiş!", "Sistem Tespiti", {timeOut: 2000});
                 }
-
-                $("#logBody").prepend(
-                    `<tr class="${rowClass}">
-                        <td>${item.tc}</td>
-                        <td>${item.ad}</td>
-                        <td>${item.anneAdi}</td>
-                        <td>${item.babaAdi}</td>
-                        <td>${statusIcon}</td>
-                    </tr>`
-                );
             });
 
             currentOffset = data.nextOffset;

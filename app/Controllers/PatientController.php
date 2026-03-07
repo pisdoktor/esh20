@@ -620,6 +620,9 @@ class PatientController {
     exit;
 }
 
+    /**
+    * Hasta ölüm taraması 
+    */
     public function scan() {
         
         $model = new Patient();
@@ -643,24 +646,33 @@ class PatientController {
     foreach ($patients as $p) {
         $check = \App\Helpers\ValidationHelper::checkDeathNotification($p);
         
+        // Ölüm tarihi varsa ölenler listesine alalım
         if ($check) {
-            $model->load($p->id);
+            
+            if ($model->load($p->id)) {
+            
             $pasiftarihi = date('Y-m-d', strtotime($check));
             
-            $newNote = 'Vefat etti: '. $check;
+            $existingNotes = json_decode($model->notes, true);
+            if (!is_array($existingNotes)) { $existingNotes = []; }
+        
+            $newNote = 'Vefat Tarihi: '. $check;
             
-            $notesArray[] = [
-            'date'    => date('d.m.Y H:i'), // Otomatik tarih ve saat
-            'user'    => $_SESSION['name'] ?? 'Sistem', // Opsiyonel: Notu yazan kişi
-            'message' => htmlspecialchars($newNote)
+            $newNote = [
+            'date'    => date('d.m.Y H:i'),
+            'user'    => 'Sistem',
+            'message' => 'MERNİS: Vefat Tespit Edildi (Tarih: ' . $check . ')'
             ];
-
-            $notes = json_encode($notesArray, JSON_UNESCAPED_UNICODE);
             
-            $model->pasif = '-1';
-            $model->pasifnedeni = '1'; //vefat
-            $model->pasiftarihi = $pasiftarihi;
+            array_unshift($existingNotes, $newNote);
+
+            $model->set('pasif', '-1');
+            $model->set('pasifnedeni', '1');
+            $model->set('pasiftarihi', $pasiftarihi);
+            $model->set('notes', json_encode($existingNotes, JSON_UNESCAPED_UNICODE));
             $model->store();
+            
+            } 
         }
         
         $oldu = $check ? '1':'0';
