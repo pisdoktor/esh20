@@ -34,7 +34,7 @@
 
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
     <tr class="align-middle">
@@ -108,7 +108,7 @@
 
         <td style="vertical-align: middle;">
             <div class="dropdown">
-                <a class="dropdown-toggle text-decoration-none fw-bold" href="#" data-bs-toggle="dropdown" 
+                <a class="dropdown-toggle text-decoration-none small" href="#" data-bs-toggle="dropdown" 
                    style="color:<?= $patient->cinsiyet == '1' ? '#0d6efd' : '#dc3545' ?>;">
                     <?= htmlspecialchars($patient->isim . ' ' . $patient->soyisim) ?>
                 </a>
@@ -130,7 +130,7 @@
         </td>
 
         <td style="vertical-align: middle;">
-            <code class="text-dark fw-bold">
+            <code class="text-dark">
                 <?= \App\Helpers\ValidationHelper::formatTc($patient->tckimlik) ?>
             </code>
         </td>
@@ -138,17 +138,16 @@
         <td style="vertical-align: middle;">
     <div class="d-flex flex-column">
         <div class="d-flex align-items-center mb-1">
-            <i class="fa-solid fa-map-location-dot me-1 text-muted opacity-50"></i>
+            <i class="fa-solid fa-map-location-dot me-1 small text-muted opacity-50"></i>
             <span class="small fw-semibold text-dark me-2"><?= $patient->mahalle_adi ?></span>
-            
-            <a href="index.php?controller=Patient&action=listactive&search=<?= urlencode($patient->ilce_adi) ?>" 
-               class="badge bg-primary-soft text-primary x-small fw-normal text-decoration-none">
-                <?= mb_strtoupper($patient->ilce_adi, 'UTF-8') ?>
-            </a>
         </div>
         
         <div class="x-small text-muted">
              <?= $patient->sokak_adi ?> No: <?= $patient->kapino ?>
+             <a href="index.php?controller=Patient&action=listactive&search=<?= urlencode($patient->ilce_adi) ?>" 
+               class="badge bg-primary-soft text-primary x-small fw-normal text-decoration-none">
+                <?= mb_strtoupper($patient->ilce_adi, 'UTF-8') ?>
+            </a>
         </div>
     </div>
 </td>
@@ -169,7 +168,7 @@
         
         <td style="vertical-align: middle;">
             <?php if(!empty($patient->ceptel1)): ?>
-                <div class="small">
+                <div class="x-small">
                     <i class="fa-solid fa-mobile-screen text-success me-1"></i>
                     <a href="tel:<?= $patient->ceptel1 ?>" class="text-decoration-none text-dark"><?= $patient->ceptel1 ?></a>
                 </div>

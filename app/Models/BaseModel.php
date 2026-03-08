@@ -6,11 +6,13 @@ class BaseModel {
     public $db;
     protected $_tbl = '';
     protected $_tbl_key = 'id';
+    protected $_dirty = [];
 
     public function __construct($table, $key = 'id') {
         $this->db = Database::getInstance();
         $this->_tbl = $table;
         $this->_tbl_key = $key;
+        
     }
 
     /**
@@ -22,20 +24,22 @@ class BaseModel {
     foreach ($data as $key => $value) {
         if (property_exists($this, $key)) {
             
-            // 1. Değeri temizle (Başındaki/sonundaki boşlukları al)
             $cleanValue = is_string($value) ? trim($value) : $value;
 
-            // 2. Boşluk Kontrolü: Eğer değer boş string, "NULL" kelimesi 
-            // veya 1970 tarihi ise nesne özelliğini gerçek NULL yap.
-            if ($cleanValue === '' || $cleanValue === 'NULL' || $cleanValue === '1970.01.01') {
+            // GEÇERSİZ TARİH KONTROLÜ: 0000-00-00 veya 1970 gibi değerleri NULL yap
+            if (
+                $cleanValue === '0000-00-00' || 
+                $cleanValue === '0000-00-00 00:00:00' || 
+                $cleanValue === '' || 
+                $cleanValue === 'NULL' || 
+                $cleanValue === '1970.01.01'
+            ) {
                 $this->$key = null;
             } 
-            // 3. ID alanı özel kontrolü
             elseif (($key === $this->_tbl_key || $key === 'id') && empty($cleanValue)) {
                 $this->$key = null;
             } 
             else {
-                // Değer doluysa ata
                 $this->$key = $cleanValue;
             }
         }
@@ -49,12 +53,26 @@ class BaseModel {
     public function store($updateNulls = false) {
         $k = $this->_tbl_key;
 
+        // Eğer hiçbir alan değişmemişse (ve yeni kayıt değilse) işlem yapma
+        if (!$this->$k && empty($this->_dirty)) {
+             return false; 
+        }
+
         if ($this->$k) {
-            // ID varsa: Database.php içindeki modern updateObject'i kullan
-            return $this->db->updateObject($this->_tbl, $this, $this->_tbl_key, $updateNulls);
+            // GÜNCELLEME: Sadece $_dirty içindeki alanları gönderiyoruz
+            $result = $this->db->updateObject($this->_tbl, $this->_dirty, $this->_tbl_key, $this->$k);
+            if ($result) { $this->_dirty = []; } // İşlem başarılıysa listeyi boşalt
+            return $result;
         } else {
-            // ID yoksa: Database.php içindeki modern insertObject'i kullan
-            return $this->db->insertObject($this->_tbl, $this, $this->_tbl_key);
+            // YENİ KAYIT: Tüm nesne özelliklerini veya sadece set edilenleri gönderebiliriz
+            // Tutarlılık için burada da $_dirty kullanıyoruz
+            $result = $this->db->insertObject($this->_tbl, $this->_dirty, $this->_tbl_key);
+            if ($result) {
+                $id = $this->db->insertid();
+                $this->$k = $id;
+                $this->_dirty = [];
+            }
+            return $result;
         }
     }
 
@@ -105,6 +123,7 @@ class BaseModel {
                 $this->$k = null;
             }
         }
+        $this->_dirty = [];
     }
     
     /**
@@ -114,7 +133,19 @@ class BaseModel {
     public function set($field, $value) {
         if (property_exists($this, $field)) {
             $this->$field = $value;
+            // ID alanı değilse, bu alanın değiştiğini işaretle
+            if ($field !== $this->_tbl_key) {
+                $this->_dirty[$field] = $value;
+            }
         }
-        return $this; // Zincirleme (Fluent) yapı için
+        return $this;
+    }
+    
+    public function get( $field ) {
+        if(isset( $this->$field )) {
+            return $this->$field;
+        } else {
+            return null;
+        }
     }
 }

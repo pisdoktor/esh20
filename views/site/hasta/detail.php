@@ -56,7 +56,7 @@
                         <?php if($hasta->pasif): ?>
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             <span class="text-muted small fw-bold">
-                                Vefat/Pasif Tarihi: <?= \App\Helpers\DateHelper::toTr($hasta->pasiftarihi); ?>
+                                Pasif Tarihi: <?= \App\Helpers\DateHelper::toTr($hasta->pasiftarihi); ?>
                             </span>
                             <span class="badge bg-danger">
                                 <i class="fa-solid fa-lock me-1"></i> DOSYA KAPALI (<?php echo $pasifnedeni; ?>)

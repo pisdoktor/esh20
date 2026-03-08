@@ -638,26 +638,31 @@ class PatientController {
     // JS'den gelen offset değerini al
     $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
     $limit = 20;
-
-    $model = new Patient();
+    
+    $model = new Patient();  
+    
     $patients = $model->getPatientsForScan($offset, $limit);
     
     $results = [];
     foreach ($patients as $p) {
+        
+        $model->reset();
+        
         $check = \App\Helpers\ValidationHelper::checkDeathNotification($p);
         
         // Ölüm tarihi varsa ölenler listesine alalım
         if ($check) {
-            
+        
             if ($model->load($p->id)) {
             
             $pasiftarihi = date('Y-m-d', strtotime($check));
             
-            $existingNotes = json_decode($model->notes, true);
-            if (!is_array($existingNotes)) { $existingNotes = []; }
+            // Notları çöz ve her zaman dizi olduğundan emin ol
+            $existingNotes = json_decode($model->notes ?? '', true);
+            if (!is_array($existingNotes)) {
+                $existingNotes = [];
+            }
         
-            $newNote = 'Vefat Tarihi: '. $check;
-            
             $newNote = [
             'date'    => date('d.m.Y H:i'),
             'user'    => 'Sistem',
@@ -666,6 +671,7 @@ class PatientController {
             
             array_unshift($existingNotes, $newNote);
 
+            
             $model->set('pasif', '-1');
             $model->set('pasifnedeni', '1');
             $model->set('pasiftarihi', $pasiftarihi);
@@ -677,14 +683,16 @@ class PatientController {
         
         $oldu = $check ? '1':'0';
 
+        if ($oldu) {
         $results[] = [
-            'tc'    => $p->tckimlik,
+            'tc'    => \App\Helpers\ValidationHelper::formatTc($p->tckimlik),
             'ad'    => $p->isim . ' ' . $p->soyisim,
             'anneAdi' => $p->anneAdi,
             'babaAdi' => $p->babaAdi,
             'oldu'  => $oldu,
             'tarih' => $check
         ];
+        }
     }
 
     header('Content-Type: application/json');

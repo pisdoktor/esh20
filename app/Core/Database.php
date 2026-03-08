@@ -17,7 +17,7 @@ class Database {
     private $_errorNum = 0;
     private $_errorMsg = '';
     private $_log = [];
-    private $_debug = 0; 
+    private $_debug = 1; 
 
     private function __construct() {
         try {
@@ -128,39 +128,42 @@ class Database {
     }
 
     // --- NESNE KAYIT VE GÜNCELLEME (Legacy insertObject/updateObject) ---
-
-    public function insertObject($table, &$object, $keyName = null) {
+    public function insertObject($table, $data, $keyName = null) {
         $fields = []; $values = []; $placeholders = [];
-        foreach (get_object_vars($object) as $k => $v) {
-            if (is_array($v) || is_object($v) || $v === null || $k[0] == '_') continue;
+        
+        foreach ($data as $k => $v) {
+            if ($k[0] == '_') continue; // Gizli alanları atla
             $fields[] = "`$k`";
             $placeholders[] = "?";
             $values[] = $v;
         }
+        
+        if (empty($fields)) return false;
+
         $sql = "INSERT INTO " . $this->replacePrefix($table) . " (" . implode(',', $fields) . ") VALUES (" . implode(',', $placeholders) . ")";
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($values);
-            $id = $this->pdo->lastInsertId();
-            if ($keyName && $id) { $object->$keyName = $id; }
-            return true;
+            return $stmt->execute($values);
         } catch (Exception $e) {
             $this->handleError($e, "insertObject Hatası");
             return false;
         }
     }
 
-    public function updateObject($table, &$object, $keyName, $updateNulls = true) {
-        $sets = []; $values = []; $whereValue = null;
-        foreach (get_object_vars($object) as $k => $v) {
-            if (is_array($v) || is_object($v) || $k[0] == '_') continue;
-            if ($k == $keyName) { $whereValue = $v; continue; }
-            if ($v === null && !$updateNulls) continue;
+    public function updateObject($table, $data, $keyName, $keyValue) {
+        $sets = []; $values = [];
+        
+        foreach ($data as $k => $v) {
+            if ($k[0] == '_') continue;
             $sets[] = "`$k` = ?";
             $values[] = $v;
         }
-        $values[] = $whereValue;
+        
+        if (empty($sets)) return false;
+
+        $values[] = $keyValue; // WHERE şartı için ID değeri
         $sql = "UPDATE " . $this->replacePrefix($table) . " SET " . implode(',', $sets) . " WHERE `$keyName` = ?";
+        
         try {
             $stmt = $this->pdo->prepare($sql);
             return $stmt->execute($values);

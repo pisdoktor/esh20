@@ -96,8 +96,8 @@ function runBatch() {
             $("#progressBar").css("width", percent + "%");
             $("#percentText").text("%" + percent);
 
-            // Belediyeyi yormamak için 800ms bekle ve sonraki pakete geç
-            setTimeout(runBatch, 800);
+            // Belediyeyi yormamak için 1000ms bekle ve sonraki pakete geç
+            setTimeout(runBatch, 1000);
         } else {
             finishScan();
         }
