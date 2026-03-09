@@ -100,7 +100,8 @@ class PatientController {
     
     $viewlink   = "index.php?controller=Patient&action=view&id=";
     $editlink   = "index.php?controller=Patient&action=edit&id=";
-    $deletelink = "index.php?controller=Patient&action=delete&id="; 
+    
+    $deletelink = "index.php?controller=Patient&action=changeactive&id="; 
 
     // 5. View'a Gönderilecek Ek Değişkenler
     $pageTitle = "Pasif Hasta Listesi";
@@ -132,9 +133,9 @@ class PatientController {
         $totalPages = ceil($totalPatients / $limit);
         
         $pagelink = "index.php?controller=Patient&action=listwaiting";
-        $viewlink = "index.php?controller=Patient&action=bview&id=";
-        $editlink = "index.php?controller=Patient&action=bedit&id=";
-        $deletelink = "";
+        $viewlink = "index.php?controller=Patient&action=view&id=";
+        $editlink = "index.php?controller=Patient&action=edit&id=";
+        $deletelink = "index.php?controller=Patient&action=deletewaiting&id=";
 
         $pageTitle = "Bekleyen Hasta Listesi";
         include '../views/partials/header.php';
@@ -163,8 +164,8 @@ class PatientController {
         
         $pagelink = "index.php?controller=Patient&action=listdied";
         $viewlink = "index.php?controller=Patient&action=view&id=";
-        $editlink = "";
-        $deletelink = "";
+        $editlink = "index.php?controller=Patient&action=edit&id=";
+        $deletelink = "index.php?controller=Patient&action=deletedied&id=";
 
         $pageTitle = "Ölen Hasta Listesi";
         include '../views/partials/header.php';
@@ -338,9 +339,6 @@ class PatientController {
             'barmerdiven'  => ['label' => 'Merdiven',      'max' => 10, 'desc' => '0: Bağımlı, 5: Yardımla, 10: Bağımsız']
         ];
         $barthelscore = (new Patient())->getBarthelScore();
-        
-        // En başa "Seçiniz" seçeneği ekleyelim (Obje olarak)
-        $options[] = \App\Helpers\FormHelper::makeOption('', 'Hastalık Seçiniz');
     
         foreach($hastaliklar as $hastalik) {
         // makeOption zaten bir stdClass (obje) döndürür
@@ -673,7 +671,7 @@ class PatientController {
 
             
             $model->set('pasif', '-1');
-            $model->set('pasifnedeni', '1');
+            $model->set('pasifnedeni', '2');
             $model->set('pasiftarihi', $pasiftarihi);
             $model->set('notes', json_encode($existingNotes, JSON_UNESCAPED_UNICODE));
             $model->store();
@@ -703,4 +701,78 @@ class PatientController {
     ]);
     exit;
 }
+
+    /**
+    * Hasta durum değiştirme işlemleri
+    */
+    public function deletedied() {
+        
+        $id = $_GET['id'];
+        $patient = new Patient();
+        
+        $patient->load($id);
+        
+        $patient->set('pasif', '1');
+        $patient->set('pasifnedeni', '2');
+        
+        $result = $patient->store();
+
+        if ($result) {
+            $_SESSION['success'] = "Hasta pasif alındı";
+            header("Location: index.php?controller=Patient&action=listdied");
+        } else {
+            $_SESSION['error'] = "Veritabanı hatası: Hasta bilgileri kaydedilemedi";
+            header("Location: index.php?controller=Patient&action=edit&id=".$patient->id);
+        }
+        exit;
+        
+    }
+    
+    public function deletewaiting() {
+        
+        $id = $_GET['id'];
+        $patient = new Patient();
+        
+        $patient->load($id);
+        
+        $patient->set('pasif', '5');
+        $patient->set('pasifnedeni', '4');
+        $patient->set('pasiftarihi', date('Y-m-d'));
+        
+        $result = $patient->store();
+
+        if ($result) {
+            $_SESSION['success'] = "Hasta bekleyenlerden silindi";
+            header("Location: index.php?controller=Patient&action=listwaiting");
+        } else {
+            $_SESSION['error'] = "Veritabanı hatası: Hasta bilgileri kaydedilemedi";
+            header("Location: index.php?controller=Patient&action=listwaiting");
+        }
+        exit;
+        
+    }
+    
+    public function changeactive() {
+        
+        $id = $_GET['id'];
+        $patient = new Patient();
+        
+        $patient->load($id);
+        
+        $patient->set('pasif', '0');
+        $patient->set('pasifnedeni', NULL);
+        $patient->set('pasiftarihi', NULL);
+        
+        $result = $patient->store();
+
+        if ($result) {
+            $_SESSION['success'] = "Hasta aktif edildi";
+            header("Location: index.php?controller=Patient&action=listactive");
+        } else {
+            $_SESSION['error'] = "Veritabanı hatası: Hasta bilgileri kaydedilemedi";
+            header("Location: index.php?controller=Patient&action=listpassive");
+        }
+        exit;
+        
+    }
 }

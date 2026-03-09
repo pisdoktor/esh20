@@ -33,7 +33,7 @@ define('TOMTOM_KEY', '6Nw0E48SHVaoOxvAWxFVRYArWkTsUMeB');
 // config.php
 define('START_LAT', '37.7744'); // Örnek Denizli koordinatı
 define('START_LNG', '29.0875');
-define('START_NAME', 'BAKIM MERKEZİ');
+define('START_NAME', 'DDH Evde Bakım');
 /**
  * Oturum Güvenliği
  * Session çalınmasını önlemek için temel ayarlar

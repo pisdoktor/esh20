@@ -69,12 +69,14 @@ class PlannedVisit extends BaseModel {
         return $this->db->setQuery($query)->loadResult();
     }
 
+    //Aylık planlı getir
+    //Aylık planlı getir (Pansumanlar Dahil Edildi)
     public function getMonthPlans($year, $month) {
     
         $startDate = sprintf('%04d-%02d-01', (int)$year, (int)$month);
         $endDate = date("Y-m-t", strtotime($startDate));
         
-        $list = ['resProc' => [], 'resDone' => [], 'resFirst' => []];
+        $list = ['resProc' => [], 'resDone' => [], 'resFirst' => [], 'resPansuman' => []];
 
         // 1. Planlı İzlemler (P ve N) - Anahtar: planlanantarih
         $query1 = "SELECT DATE_FORMAT(planlanantarih, '%Y-%m-%d') as tarih, 
@@ -110,15 +112,48 @@ class PlannedVisit extends BaseModel {
         foreach($rawResults3 as $row3) {
             $list['resFirst'][$row3->tarih] = $row3;
         }
+
+        // 4. PLANLI PANSUMANLAR (Haftalık periyoda göre hesaplama)
+        // Aktif olan ve pansuman günleri tanımlanmış hastaları çekiyoruz
+        $sqlPansuman = "SELECT pgunleri FROM esh_hastalar WHERE pansuman = 1 AND pasif = 0 AND pgunleri != ''";
+        $pansumanHastalari = $this->db->setQuery($sqlPansuman)->loadObjectList();
+
+        if ($pansumanHastalari) {
+            $period = new \DatePeriod(
+                new \DateTime($startDate),
+                new \DateInterval('P1D'),
+                (new \DateTime($endDate))->modify('+1 day')
+            );
+
+            foreach ($period as $date) {
+                $tarihKey = $date->format("Y-m-d");
+                $gunIndex = $date->format("w"); // 0: Pazar, 6: Cumartesi
+
+                $gunlukToplam = 0;
+                foreach ($pansumanHastalari as $hasta) {
+                    $gunler = explode(',', $hasta->pgunleri);
+                    if (in_array($gunIndex, $gunler)) {
+                        $gunlukToplam++;
+                    }
+                }
+
+                if ($gunlukToplam > 0) {
+                    $list['resPansuman'][$tarihKey] = (object)['tarih' => $tarihKey, 'total' => $gunlukToplam];
+                }
+            }
+        }
         
         return $list;
     }
-
+    //Günlük planlı getir
     public function getDailyPlans($date) {
         $data = [[], [], []]; // Sabah, Öğle, Akşam
         $nakiller = [];
+        
+        $dayOfWeek = date('w', strtotime($date));
 
         for ($i = 0; $i < 3; $i++) {
+            // Planlanmış izlemler
             $sql = "SELECT p.*, h.id AS hastaid, h.isim, h.soyisim, h.tckimlik, il.adi AS ilce, m.adi AS mahalle, i.islemadi as islem_label
                     FROM esh_pizlemler AS p
                     LEFT JOIN esh_hastalar AS h ON p.hastatckimlik = h.tckimlik
@@ -129,7 +164,7 @@ class PlannedVisit extends BaseModel {
                     AND p.zaman = $i AND p.yapilacak != 23
                     ORDER BY h.mahalle ASC";
             $data[$i]['planli'] = $this->db->setQuery($sql)->loadObjectList();
-            
+            //Planlanmış ilk ziyaretler
             $sql = "SELECT h.id AS hastaid, h.tckimlik, h.isim, h.soyisim, il.adi AS ilce, m.adi AS mahalle, 'İlk Kayıt' as islem_label 
                     FROM esh_hastalar AS h
                     LEFT JOIN esh_adrestablosu AS il ON il.id = h.ilce
@@ -138,8 +173,21 @@ class PlannedVisit extends BaseModel {
                     ORDER BY h.mahalle ASC";
             $data[$i]['ilkziyaret'] = $this->db->setQuery($sql)->loadObjectList();
             
+            // 3. EKLENEN: Periyodik Pansumanlar
+            // pgunleri içinde bugünün günü var mı ve pansuman aktif mi kontrolü
+            $sqlPansuman = "SELECT h.id AS hastaid, h.tckimlik, h.isim, h.soyisim, il.adi AS ilce, m.adi AS mahalle, 'Pansuman' as islem_label 
+                            FROM esh_hastalar AS h
+                            LEFT JOIN esh_adrestablosu AS il ON il.id = h.ilce
+                            LEFT JOIN esh_adrestablosu AS m ON m.id = h.mahalle
+                            WHERE h.pzaman = $i 
+                            AND h.pansuman = 1 
+                            AND h.pasif = 0 
+                            AND FIND_IN_SET('$dayOfWeek', h.pgunleri) > 0
+                            ORDER BY h.mahalle ASC";
+            $data[$i]['pansuman'] = $this->db->setQuery($sqlPansuman)->loadObjectList();
+            
         }
-
+        //Planlanmış nakiller
         $sqlNakil = "SELECT p.*, h.id AS hastaid, h.isim, h.soyisim, h.tckimlik, il.adi AS ilce, m.adi AS mahalle, 'Nakil' as islem_label
                      FROM esh_pizlemler AS p
                      LEFT JOIN esh_hastalar AS h ON p.hastatckimlik = h.tckimlik
@@ -156,191 +204,6 @@ class PlannedVisit extends BaseModel {
         ];
     }
     
-    public function calculateSmartRoute($date) {
-    // 1. AYARLAR & KATSAYILAR (Config'den çekilebilir)
-    $merkez = ['lat' => 37.783291, 'lng' => 29.079663];
-    $is_yuku_cezasi = 10; // Her eklenen hasta için maliyet artışı
-    $mahalle_bonusu = 40; // Aynı mahalledeki hastalar için öncelik
-    
-    // 2. VERİLERİ ÇEK (Pansuman, İlk Ziyaret ve İzlemler)
-    // Not: Bu kısımdaki SQL'leri senin getDailyPlans metodundaki JOIN'ler ile birleştirebilirsin
-    $hastalar = $this->getRawRouteData($date); // Tüm aktif işleri getiren yardımcı metod
-    
-    // 3. EKİPLERİ BELİRLE (Veritabanından veya varsayılan)
-    $ekipler = [
-        0 => ['isim' => 'Sabah Ekibi 1', 'baslangic' => '09:00', 'hastalar' => []],
-        1 => ['isim' => 'Öğle Ekibi 1', 'baslangic' => '13:00', 'hastalar' => []]
-    ];
-
-    foreach ($hastalar as $zk => $vardiyaHastalar) {
-        if (!isset($ekipler[$zk])) continue;
-        
-        $kalanlar = $vardiyaHastalar;
-        $ekipKonum = ['lat' => $merkez['lat'], 'lng' => $merkez['lng']];
-        $ekipSaat = strtotime($date . ' ' . $ekipler[$zk]['baslangic']);
-
-        while (count($kalanlar) > 0) {
-            $best_idx = -1;
-            $min_maliyet = 999999;
-            
-            // TOMTOM MATRIX VERİSİ (Senin getTomTomMatrixData fonksiyonun)
-            $matrix = $this->getTomTomMatrixData($ekipKonum['lat'], $ekipKonum['lng'], $kalanlar);
-
-            for ($k = 0; $k < count($kalanlar); $k++) {
-                $h = $kalanlar[$k];
-                $s_sure = $matrix[$k]['travelTimeInSeconds'] / 60;
-                
-                // --- SÜPER FORMÜL BURADA ---
-                $maliyet = ($s_sure + (count($ekipler[$zk]['hastalar']) * $is_yuku_cezasi)) 
-                           - (($h->oncelik == 3 ? 75 : 0) + ($h->mahalle == $last_mahalle ? 40 : 0));
-
-                if ($maliyet < $min_maliyet) {
-                    $min_maliyet = $maliyet;
-                    $best_idx = $k;
-                }
-            }
-
-            if ($best_idx != -1) {
-                $secilen = $kalanlar[$best_idx];
-                $secilen->varis_saati = date('H:i', $ekipSaat + ($matrix[$best_idx]['travelTimeInSeconds']));
-                
-                // Değerleri Güncelle
-                $ekipSaat += ($matrix[$best_idx]['travelTimeInSeconds'] + ($secilen->sure * 60));
-                $coords = explode(',', $secilen->coords);
-                $ekipKonum = ['lat' => $coords[0], 'lng' => $coords[1]];
-                $last_mahalle = $secilen->mahalle;
-
-                $ekipler[$zk]['hastalar'][] = $secilen;
-                array_splice($kalanlar, $best_idx, 1);
-            }
-        }
-    }
-    return $ekipler;
-}
-
-    public function getTomTomMatrixData($startLat, $startLon, $hastalar, $apiKey) {
-    $results = array();
-    
-    // Matrix yetki hatasını aşmak için standart Routing API'yi tek tek çağırıyoruz
-    for($k = 0; $k < count($hastalar); $k++) {
-        $h = $hastalar[$k];
-        $cp = explode(',', $h->coords);
-        $destLat = trim($cp[0]);
-        $destLon = trim($cp[1]);
-        
-        // Standart Routing API URL'si (Senin anahtarındaki "Routing API" yetkisini kullanır)
-        $url = "http://api.tomtom.com/routing/1/calculateRoute/" . $startLat . "," . $startLon . ":" . $destLat . "," . $destLon . "/json?key=" . $apiKey . "&travelMode=car&traffic=true";
-        
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        
-        // SSL Protokol hatalarını aşmak için (Önceki adımda çözmüştük)
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        if(defined('CURL_SSLVERSION_TLSv1_2')) {
-            curl_setopt($ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
-        } else {
-            curl_setopt($ch, CURLOPT_SSLVERSION, 6); 
-        }
-
-        $response = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($http_code == 200) {
-            $data = php4_json_decode($response);
-            if (isset($data['routes'][0]['summary'])) {
-                // Algoritmanın beklediği formatta veriyi diziye ekle
-                $results[$k] = $data['routes'][0]['summary'];
-            } else {
-                $results[$k] = array('travelTimeInSeconds' => 999999, 'lengthInMeters' => 999999);
-            }
-        } else {
-            // API hatası (Kota vb.) durumunda en uzak nokta kabul et
-            $results[$k] = array('travelTimeInSeconds' => 999999, 'lengthInMeters' => 999999);
-        }
-        
-        // Freemium saniye limitine (QPS) takılmamak için minik bir duraklama
-        usleep(150000); // 0.15 saniye
-    }
-    return $results;
-}
-
-    public function getRawRouteData($date) {
-    $ts = strtotime($date);
-    $today_day = date('w', $ts); // Haftanın günü (0: Pazar, 6: Cumartesi)
-    $start_time = $date . ' 00:00:00';
-    $end_time = $date . ' 23:59:59';
-    
-    $ham_veri = [];
-
-    // ORTAK SQL ALANLARI VE JOINLER
-    $q_common = "h.id, h.isim, h.soyisim, h.tckimlik, h.coords, h.mahalle as mahalle_id, m.adi as mahalle_adi";
-    $q_joins  = "LEFT JOIN esh_adrestablosu AS m ON h.mahalle = m.id ";
-
-    // 1. PANSUMANLAR (pgunleri içinde bugünün günü olanlar)
-    $sqlPansuman = "SELECT $q_common, h.zaman as zaman_kodu 
-                    FROM esh_hastalar AS h $q_joins 
-                    WHERE h.pansuman = 1 
-                    AND FIND_IN_SET('$today_day', h.pgunleri) > 0 
-                    AND h.pasif = 0 AND h.coords != ''";
-    $rows = $this->db->setQuery($sqlPansuman)->loadObjectList();
-    if($rows) {
-        foreach($rows as $r) {
-            $r->etiket = 'Pansuman';
-            $r->oncelik = 1; // Standart öncelik
-            $r->sure = 15;   // Dakika
-            $ham_veri[] = $r;
-        }
-    }
-
-    // 2. İLK MUAYENELER (pasif = -3 ve randevutarihi bugün olanlar)
-    $sqlİlk = "SELECT $q_common, h.zaman as zaman_kodu 
-               FROM esh_hastalar AS h $q_joins 
-               WHERE h.pasif = '-3' 
-               AND h.randevutarihi = " . $this->db->quote($date) . " 
-               AND h.coords != ''";
-    $rows = $this->db->setQuery($sqlİlk)->loadObjectList();
-    if($rows) {
-        foreach($rows as $r) {
-            $r->etiket = 'İlk Ziyaret';
-            $r->oncelik = 2; // Yüksek öncelik
-            $r->sure = 45; 
-            $ham_veri[] = $r;
-        }
-    }
-
-    // 3. PLANLI İZLEMLER (pizlemler tablosu)
-    $sqlIzlem = "SELECT $q_common, p.zaman as zaman_kodu, p.oncelik, i.islemadi as islem_detaylari
-                 FROM esh_pizlemler AS p 
-                 LEFT JOIN esh_hastalar AS h ON p.hastatckimlik = h.tckimlik 
-                 LEFT JOIN esh_islemler AS i ON p.yapilacak = i.id
-                 $q_joins 
-                 WHERE p.planlanantarih = " . $this->db->quote($date) . " 
-                 AND h.pasif = 0 AND h.coords != ''";
-    $rows = $this->db->setQuery($sqlIzlem)->loadObjectList();
-    if($rows) {
-        foreach($rows as $r) {
-            $r->etiket = $r->islem_detaylari ?? 'İzlem';
-            $r->oncelik = (int)$r->oncelik;
-            $r->sure = 25; 
-            $ham_veri[] = $r;
-        }
-    }
-
-    // VERİYİ ZAMAN KODUNA GÖRE GRUPLA (0: Sabah, 1: Öğle, 2: Akşam)
-    $zamanli_veri = [0 => [], 1 => [], 2 => []];
-    foreach($ham_veri as $item) {
-        $zk = (int)$item->zaman_kodu;
-        if(isset($zamanli_veri[$zk])) {
-            $zamanli_veri[$zk][] = $item;
-        }
-    }
-
-    return $zamanli_veri;
-}
-
     private function formatDateTurkish($date) {
     $time = strtotime($date);
     $months = ['','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -414,4 +277,187 @@ class PlannedVisit extends BaseModel {
                 ORDER BY p.planlanantarih ASC";
         return $this->db->setQuery($sql)->loadObjectList();
     }
+
+    public function calculateSmartRoute($date) {
+    // 1. AYARLAR & KATSAYILAR (Config'den çekilebilir)
+    $merkez = ['lat' => START_LAT, 'lng' => START_LNG];
+    $is_yuku_cezasi = 10; // Her eklenen hasta için maliyet artışı
+    $mahalle_bonusu = 40; // Aynı mahalledeki hastalar için öncelik
+    
+    // 2. VERİLERİ ÇEK (Pansuman, İlk Ziyaret ve İzlemler)
+    // Not: Bu kısımdaki SQL'leri senin getDailyPlans metodundaki JOIN'ler ile birleştirebilirsin
+    $hastalar = $this->getRawRouteData($date); // Tüm aktif işleri getiren yardımcı metod
+    
+    // 3. EKİPLERİ BELİRLE (Veritabanından veya varsayılan)
+    $ekipler = [
+        0 => ['isim' => 'Sabah Ekibi 1', 'baslangic' => '09:00', 'hastalar' => []],
+        1 => ['isim' => 'Öğle Ekibi 1', 'baslangic' => '13:00', 'hastalar' => []],
+        2 => ['isim' => 'Akşam Ekibi 1', 'baslangic' => '16:00', 'hastalar' => []]
+    ];
+    
+
+    foreach ($hastalar as $zk => $vardiyaHastalar) {
+        if (!isset($ekipler[$zk])) continue;
+        
+        $kalanlar = $vardiyaHastalar;
+        $ekipKonum = ['lat' => $merkez['lat'], 'lng' => $merkez['lng']];
+        $ekipSaat = strtotime($date . ' ' . $ekipler[$zk]['baslangic']);
+        
+        while (count($kalanlar) > 0) {
+            $best_idx = -1;
+            $min_maliyet = 999999;
+            
+            // TOMTOM MATRIX VERİSİ (Senin getTomTomMatrixData fonksiyonun)
+            $matrix = $this->getTomTomMatrixData($ekipKonum['lat'], $ekipKonum['lng'], $kalanlar, TOMTOM_KEY);
+            
+            $last_mahalle = '';
+            
+            for ($k = 0; $k < count($kalanlar); $k++) {
+                $h = $kalanlar[$k];
+                $s_sure = $matrix[$k]->travelTimeInSeconds / 60;
+                
+                // --- SÜPER FORMÜL BURADA ---
+                $maliyet = ($s_sure + (count($ekipler[$zk]['hastalar']) * $is_yuku_cezasi)) 
+                           - (($h->oncelik == 3 ? 75 : 0) + ($h->mahalle_id == $last_mahalle ? 40 : 0));
+
+                if ($maliyet < $min_maliyet) {
+                    $min_maliyet = $maliyet;
+                    $best_idx = $k;
+                }
+            }
+
+            if ($best_idx != -1) {
+                $secilen = $kalanlar[$best_idx];
+                $secilen->varis_saati = date('H:i', $ekipSaat + ($matrix[$best_idx]->travelTimeInSeconds));
+                
+                // Değerleri Güncelle
+                $ekipSaat += ($matrix[$best_idx]->travelTimeInSeconds + ($secilen->sure * 60));
+                $coords = explode(',', $secilen->coords);
+                $ekipKonum = ['lat' => $coords[0], 'lng' => $coords[1]];
+                $last_mahalle = $secilen->mahalle_id;
+
+                $ekipler[$zk]['hastalar'][] = $secilen;
+                array_splice($kalanlar, $best_idx, 1);
+            }
+        }
+    } 
+    
+    return $ekipler;
+}
+
+    public function getTomTomMatrixData($startLat, $startLon, $hastalar, $apiKey) {
+    set_time_limit(0);
+    $results = array();
+    $originStr = $startLat . "," . $startLon;
+
+    for($k = 0; $k < count($hastalar); $k++) {
+        $h = $hastalar[$k];
+        $destStr = trim($h->coords);
+        $hash = md5($originStr . $destStr);
+        
+        // 1. Önce Cache tablosuna bakıyoruz
+        $cache = $this->db->setQuery("SELECT sure, mesafe FROM esh_rota_cache WHERE hash = ".$this->db->quote($hash))->loadObject();
+
+        if ($cache) {
+            // Varsa cache'ten al
+            $results[$k] = (object) [
+                'travelTimeInSeconds' => (int)$cache->sure, 
+                'lengthInMeters' => (int)$cache->mesafe
+            ];
+        } else {
+            // 2. Yoksa SENİN ORİJİNAL cURL YAPINLA API'ye git
+            $url = "https://api.tomtom.com/routing/1/calculateRoute/$originStr:$destStr/json?key=$apiKey&travelMode=car&traffic=true";
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            // TomTom bazen User-Agent bekler, onu da ekleyelim ki 403 vermesin
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'); 
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($httpCode == 200 && $response) {
+                $data = json_decode($response);
+                if (isset($data->routes[0]->summary)) {
+                    $summary = $data->routes[0]->summary;
+                    
+                    // 3. Gelecek sefer için Cache'e Kaydet
+                    $this->db->setQuery("INSERT IGNORE INTO esh_rota_cache (hash, origin, destination, sure, mesafe) VALUES (".
+                        $this->db->quote($hash).", ".$this->db->quote($originStr).", ".$this->db->quote($destStr).", ".
+                        (int)$summary->travelTimeInSeconds.", ".(int)$summary->lengthInMeters.")")->query();
+                        
+                    $results[$k] = $summary;
+                } else {
+                    // Veri beklenen formatta değilse varsayılan
+                    $results[$k] = (object) ['travelTimeInSeconds' => 600, 'lengthInMeters' => 2000];
+                }
+            } else {
+                // HATA DURUMU (403, Timeout vb.): Sistemi çökertmemek için varsayılan bir değer dönüyoruz
+                // Buradaki 600 saniye (10 dk) ve 2000 metre senin algoritmanın çalışmaya devam etmesini sağlar
+                $results[$k] = (object) ['travelTimeInSeconds' => 600, 'lengthInMeters' => 2000];
+            }
+            
+            // API'yi yormamak için çok kısa bir bekleme
+            usleep(100000); 
+        }
+    }
+    return $results;
+}
+
+    public function getRawRouteData($date) {
+    // Veriyi vardiya (zaman_kodu) bazlı gruplayarak topluyoruz
+    $ham_veri = [
+        0 => [], // Sabah
+        1 => [], // Öğle
+        2 => []  // Akşam
+    ];
+    
+    $dayOfWeek = date('w', strtotime($date));
+    $q_common = "h.id AS hastaid, h.tckimlik, h.isim, h.soyisim, h.coords, il.adi AS ilce, m.adi AS mahalle, h.mahalle as mahalle_id";
+    $q_joins = "LEFT JOIN esh_adrestablosu AS il ON il.id = h.ilce LEFT JOIN esh_adrestablosu AS m ON m.id = h.mahalle";
+
+    // 1. İLK ZİYARETLER
+    $sql1 = "SELECT $q_common, h.zaman as zaman_kodu, 2 as oncelik, 'İlk Ziyaret' as islem_detaylari 
+             FROM esh_hastalar h $q_joins 
+             WHERE h.randevutarihi = '$date' AND h.pasif = -3 AND h.coords != ''";
+    $res1 = $this->db->setQuery($sql1)->loadObjectList() ?: [];
+    foreach($res1 as $r) { 
+        $r->etiket = 'İlk Ziyaret'; 
+        $r->sure = 45; 
+        $ham_veri[(int)$r->zaman_kodu][] = $r; 
+    }
+
+    // 2. PLANLI İZLEMLER
+    $sql2 = "SELECT $q_common, p.zaman as zaman_kodu, p.oncelik, i.islemadi as islem_detaylari 
+             FROM esh_pizlemler p 
+             LEFT JOIN esh_hastalar h ON p.hastatckimlik = h.tckimlik 
+             LEFT JOIN esh_islemler i ON p.yapilacak = i.id 
+             $q_joins 
+             WHERE p.planlanantarih = '$date' AND h.pasif = 0 AND h.coords != ''";
+    $res2 = $this->db->setQuery($sql2)->loadObjectList() ?: [];
+    foreach($res2 as $r) { 
+        $r->etiket = $r->islem_detaylari; 
+        $r->sure = 30; 
+        $ham_veri[(int)$r->zaman_kodu][] = $r; 
+    }
+
+    // 3. PANSUMANLAR
+    $sql3 = "SELECT $q_common, h.zaman as zaman_kodu, 1 as oncelik, 'Pansuman' as islem_detaylari 
+             FROM esh_hastalar h $q_joins 
+             WHERE h.pansuman = 1 AND h.pasif = 0 AND h.coords != '' 
+             AND FIND_IN_SET('$dayOfWeek', h.pgunleri) > 0";
+    $res3 = $this->db->setQuery($sql3)->loadObjectList() ?: [];
+    foreach($res3 as $r) { 
+        $r->etiket = 'Pansuman'; 
+        $r->sure = 20; 
+        $ham_veri[(int)$r->zaman_kodu][] = $r; 
+    }
+
+    return $ham_veri;
+}
 }

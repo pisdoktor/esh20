@@ -86,15 +86,17 @@
     <tr>
             <td style="vertical-align: middle;">
             <div class="dropdown">
-                <a class="dropdown-toggle text-decoration-none fw-bold" href="#" data-bs-toggle="dropdown" 
+                <a class="dropdown-toggle text-decoration-none" href="#" data-bs-toggle="dropdown" 
                    style="color:<?= $patient->cinsiyet == '1' ? '#0d6efd' : '#dc3545' ?>;">
                     <?= htmlspecialchars($patient->isim . ' ' . $patient->soyisim) ?>
                 </a>
 
                 <ul class="dropdown-menu shadow border-0">
                     <li><h6 class="dropdown-header">Hasta İşlemleri</h6></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Patient&action=view&id=<?= $patient->id ?>"><i class="fa-solid fa-id-card text-primary me-2"></i> Bilgileri Göster</a></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Patient&action=edit&id=<?= $patient->id ?>"><i class="fa-solid fa-pen-to-square text-warning me-2"></i> Bilgileri Düzenle</a></li>
+                    <li><a class="dropdown-item" href="<?= $viewlink;?><?= $patient->id ?>"><i class="fa-solid fa-id-card text-primary me-2"></i> Bilgileri Göster</a></li>
+                    <li><a class="dropdown-item" href="<?= $editlink;?><?= $patient->id ?>"><i class="fa-solid fa-pen-to-square text-warning me-2"></i> Hastayı Kaydet</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="<?= $deletelink;?><?= $patient->id ?>"><i class="fa-solid fa-trash-can text-info me-2"></i> Hastayı Sil</a></li>
                 </ul>
             </div> 
         </td>

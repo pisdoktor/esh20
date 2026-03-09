@@ -117,8 +117,7 @@ class Address extends BaseModel {
     $this->ust_id = $parentId;
     $this->tip = $type;
     
-    // Database.php'deki insertObject PDO kullanır, daha güvenlidir
-    return $this->db->insertObject($this->_tbl, $this); 
+    return $this->store(); 
 }
     
     public function getUserAddress($userid) {

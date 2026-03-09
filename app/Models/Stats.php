@@ -28,31 +28,32 @@ class Stats extends BaseModel {
      * Kayıt yılına göre hasta dağılımı
      */
     public function getKayitYiliStats() {
-        $query = "SELECT kayityili, 
-                  SUM(CASE WHEN cinsiyet = 'E' THEN 1 ELSE 0 END) as erkek_sayisi,
-                  SUM(CASE WHEN cinsiyet = 'K' THEN 1 ELSE 0 END) as kadin_sayisi,
-                  COUNT(id) as toplam_sayi
-                  FROM esh_hastalar 
-                  WHERE pasif = '0' AND kayityili > 0
-                  GROUP BY kayityili 
-                  ORDER BY kayityili ASC";
-        return $this->db->setQuery($query)->loadObjectList();
-    }
+    $query = "SELECT YEAR(kayittarihi) as kayityili, 
+              SUM(CASE WHEN cinsiyet = 'E' THEN 1 ELSE 0 END) as erkek_sayisi,
+              SUM(CASE WHEN cinsiyet = 'K' THEN 1 ELSE 0 END) as kadin_sayisi,
+              COUNT(id) as toplam_sayi
+              FROM esh_hastalar 
+              WHERE pasif = '0' AND kayittarihi IS NOT NULL AND kayittarihi != '0000-00-00'
+              GROUP BY YEAR(kayittarihi) 
+              ORDER BY YEAR(kayittarihi) ASC";
+    return $this->db->setQuery($query)->loadObjectList();
+}
 
     /**
      * Kayıt ayına göre döküm
      */
     public function getKayitAyiStats() {
-        $query = "SELECT kayitay, 
-                  SUM(CASE WHEN cinsiyet = 'E' THEN 1 ELSE 0 END) as erkek_sayisi,
-                  SUM(CASE WHEN cinsiyet = 'K' THEN 1 ELSE 0 END) as kadin_sayisi,
-                  COUNT(id) as toplam_sayi
-                  FROM esh_hastalar 
-                  WHERE pasif = '0' AND kayitay > 0
-                  GROUP BY kayitay 
-                  ORDER BY kayitay ASC";
-        return $this->db->setQuery($query)->loadObjectList();
-    }
+    // Hem yıl hem ay bilgisi alarak grupluyoruz
+    $query = "SELECT YEAR(kayittarihi) as kayityili, MONTH(kayittarihi) as kayitay, 
+              SUM(CASE WHEN cinsiyet = 'E' THEN 1 ELSE 0 END) as erkek_sayisi,
+              SUM(CASE WHEN cinsiyet = 'K' THEN 1 ELSE 0 END) as kadin_sayisi,
+              COUNT(id) as toplam_sayi
+              FROM esh_hastalar 
+              WHERE pasif = '0' AND kayittarihi IS NOT NULL AND kayittarihi != '0000-00-00'
+              GROUP BY YEAR(kayittarihi), MONTH(kayittarihi) 
+              ORDER BY YEAR(kayittarihi) DESC, MONTH(kayittarihi) DESC";
+    return $this->db->setQuery($query)->loadObjectList();
+}
 
     /**
      * Genel özet (Toplam hasta, Aktif, Pasif, Erkek, Kadın)

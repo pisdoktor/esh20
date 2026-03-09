@@ -119,8 +119,9 @@
 
                 <ul class="dropdown-menu shadow border-0">
                     <li><h6 class="dropdown-header">Hasta İşlemleri</h6></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Patient&action=view&id=<?= $patient->id ?>"><i class="fa-solid fa-id-card text-primary me-2"></i> Bilgileri Göster</a></li>
-                    <li><a class="dropdown-item" href="index.php?controller=Patient&action=edit&id=<?= $patient->id ?>"><i class="fa-solid fa-pen-to-square text-warning me-2"></i> Bilgileri Düzenle</a></li>
+                    <li><a class="dropdown-item" href="<?= $viewlink;?><?= $patient->id ?>"><i class="fa-solid fa-id-card text-primary me-2"></i> Bilgileri Göster</a></li>
+                    <li><a class="dropdown-item" href="<?= $editlink;?><?= $patient->id ?>"><i class="fa-solid fa-pen-to-square text-warning me-2"></i> Bilgileri Düzenle</a></li>
+                    <li><a class="dropdown-item" href="<?= $deletelink;?><?= $patient->id ?>"><i class="fas fa-user-slash"></i> Pasife Al</a></li> 
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="index.php?controller=Visit&action=history&tc=<?= $patient->tckimlik ?>"><i class="fa-solid fa-list-check text-info me-2"></i> İzlem Geçmişi</a></li>
                 </ul>

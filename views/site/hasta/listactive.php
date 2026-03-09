@@ -20,7 +20,7 @@
         </div>
         <div class="col-md-3 text-end">
             <a href="index.php?controller=Patient&action=ilkkayit" class="btn btn-primary shadow-sm rounded-pill px-4">
-                <i class="fa-solid fa-plus me-2"></i>Yeni Kayıt
+                <i class="fa-solid fa-plus me-2"></i>Yeni İlk Kayıt
             </a>
         </div>
     </div>
